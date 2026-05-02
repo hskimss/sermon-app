@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sermon Editor</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0f1225; color: #e0e0e0; height: 100vh; overflow: hidden; font-size: 14px; }
+#topbar { background: #151a30; padding: 8px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #2a2f4c; flex-wrap: wrap; min-height: 44px; }
+#topbar .title { color: #c9a84c; font-weight: 700; margin-right: 8px; }
+#topbar button, #topbar select, #topbar input { padding: 6px 10px; background: #1a1f3c; color: #e0e0e0; border: 1px solid #2a2f4c; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; }
+#topbar button:hover { border-color: #c9a84c; color: #c9a84c; }
+#topbar button:disabled { opacity: 0.4; cursor: not-allowed; }
+#topbar .sep { width: 1px; height: 20px; background: #2a2f4c; margin: 0 4px; }
+#topbar .export-btn { background: #c9a84c; color: #1a1f3c; font-weight: 700; border: none; }
+#topbar .export-btn:hover { background: #d4b65e; color: #1a1f3c; }
+#topbar .duration { color: #888; }
+#topbar .duration .sel { color: #c9a84c; font-weight: 700; }
+#topbar .home { color: #888; text-decoration: none; }
+#topbar .home:hover { color: #c9a84c; }
+.word.ai-emphasis { color: #d4b65e; font-weight: 700; }
+#ai-clip-panel { position: fixed; right: 20px; top: 60px; width: 380px; max-height: 70vh; overflow-y: auto; background: #1a1f3c; border: 1px solid #c9a84c; border-radius: 8px; padding: 16px; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.5); display: none; }
+#ai-clip-panel.show { display: block; }
+#ai-clip-panel .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+#ai-clip-panel .panel-title { color: #c9a84c; font-weight: 700; }
+#ai-clip-panel .panel-close { background: transparent; border: none; color: #999; cursor: pointer; font-size: 18px; }
+#ai-clip-panel .clip-item { background: #111430; border: 1px solid #2a2f4c; border-radius: 6px; padding: 10px; margin-bottom: 10px; }
+#ai-clip-panel .clip-item:hover { border-color: #c9a84c; }
+#ai-clip-panel .clip-meta { font-size: 11px; color: #888; margin-bottom: 4px; }
+#ai-clip-panel .clip-arch { color: #c9a84c; }
+#ai-clip-panel .clip-score { float: right; color: #d4b65e; font-weight: 700; }
+#ai-clip-panel .clip-hook { font-size: 13px; line-height: 1.4; margin: 6px 0; color: #e0e0e0; }
+#ai-clip-panel .clip-why { font-size: 11px; color: #999; line-height: 1.3; font-style: italic; }
+#ai-clip-panel .clip-actions { margin-top: 8px; display: flex; gap: 6px; }
+#ai-clip-panel .clip-btn { flex: 1; padding: 6px; font-size: 11px; background: #1a1f3c; color: #e0e0e0; border: 1px solid #2a2f4c; border-radius: 4px; cursor: pointer; }
+#ai-clip-panel .clip-btn:hover { border-color: #c9a84c; color: #c9a84c; }
+#ai-clip-panel .clip-btn.primary { background: #c9a84c; color: #1a1f3c; border: none; font-weight: 700; }
+
+#layout { display: grid; grid-template-columns: 380px 1fr; height: calc(100vh - 44px); }
+#player-panel { background: #0a0d1f; border-right: 1px solid #2a2f4c; display: flex; flex-direction: column; padding: 16px; overflow-y: auto; }
+#player-panel video { width: 100%; background: #000; border-radius: 6px; max-height: 220px; }
+.player-info { margin-top: 12px; font-size: 12px; color: #888; }
+.timeline-nav { margin-top: 16px; }
+.timeline-nav h4 { font-size: 11px; color: #999; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+.timeline-nav button { display: block; width: 100%; text-align: left; margin-bottom: 4px; padding: 6px 10px; background: #1a1f3c; border: 1px solid #2a2f4c; border-radius: 4px; color: #ccc; font-size: 12px; cursor: pointer; }
+.timeline-nav button:hover { border-color: #c9a84c; }
+.legend { margin-top: 16px; padding: 12px; background: #1a1f3c; border-radius: 6px; font-size: 11px; line-height: 1.7; }
+.legend strong { color: #c9a84c; display: block; margin-bottom: 4px; }
+.legend-item { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+.legend-marker { width: 4px; height: 14px; border-radius: 2px; }
+
+#transcript-panel { overflow-y: auto; padding: 16px; scroll-behavior: smooth; }
+.segment { position: relative; padding: 8px 12px 8px 60px; margin-bottom: 4px; border-radius: 6px; border: 1px solid transparent; transition: background 0.1s; }
+.segment:hover { background: #1a1f3c; }
+.segment.cut .words { opacity: 0.35; }
+.segment.cut .words .word { text-decoration: line-through; color: #666; }
+.segment.selected { border-color: #c9a84c; background: rgba(201,168,76,0.05); }
+
+.segment-controls { position: absolute; left: 6px; top: 8px; display: flex; gap: 4px; align-items: center; }
+.drag-handle { cursor: grab; color: #555; padding: 2px 4px; font-size: 14px; user-select: none; }
+.drag-handle:hover { color: #c9a84c; }
+.drag-handle:active { cursor: grabbing; }
+.seg-checkbox { width: 14px; height: 14px; cursor: pointer; accent-color: #c9a84c; }
+
+.segment-marker { position: absolute; left: 50px; top: 8px; bottom: 8px; width: 4px; border-radius: 2px; }
+.segment[data-rec="cut_suggested"] .segment-marker { background: #ef5350; }
+.segment[data-rec="climax"] .segment-marker { background: #4caf50; }
+.segment[data-rec="shorts"] .segment-marker { background: #c9a84c; }
+.segment[data-rec="keep"] .segment-marker { background: #333; }
+
+.segment-meta { font-size: 10px; color: #666; margin-bottom: 2px; display: flex; gap: 8px; align-items: center; }
+.rec-badge { padding: 1px 6px; border-radius: 8px; font-size: 9px; font-weight: 700; }
+.rec-badge.cut_suggested { background: rgba(239,83,80,0.2); color: #ef5350; }
+.rec-badge.climax { background: rgba(76,175,80,0.2); color: #4caf50; }
+.rec-badge.shorts { background: rgba(201,168,76,0.2); color: #c9a84c; }
+
+.word { display: inline-block; padding: 0 2px; margin: 0 1px; border-radius: 3px; cursor: pointer; user-select: none; font-size: 14px; line-height: 1.7; }
+.word:hover { background: rgba(201,168,76,0.15); }
+.word.playing { background: #c9a84c; color: #1a1f3c; }
+.word.cut { text-decoration: line-through; color: #555; }
+.word.selected { background: rgba(201,168,76,0.4); }
+.word.edited { border-bottom: 1px dotted #c9a84c; }
+.word[contenteditable="true"] { outline: 1px solid #c9a84c; background: #2a2f4c; padding: 0 4px; }
+
+.dragging { opacity: 0.4; }
+.drop-target { border-top: 2px solid #c9a84c !important; }
+
+#empty { display: flex; height: 100%; align-items: center; justify-content: center; flex-direction: column; color: #666; }
+.toast { position: fixed; bottom: 20px; right: 20px; background: #c9a84c; color: #1a1f3c; padding: 12px 20px; border-radius: 6px; font-weight: 700; box-shadow: 0 4px 16px rgba(0,0,0,0.4); z-index: 1000; }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <a href="/" class="home">← 홈</a>
+  <span class="title">🎬 편집기</span>
+  <button id="btn-undo" disabled title="Ctrl+Z">↶</button>
+  <button id="btn-redo" disabled title="Ctrl+Shift+Z">↷</button>
+  <span class="sep"></span>
+  <button id="btn-cut">✂ 컷</button>
+  <button id="btn-restore">↩ 복원</button>
+  <span class="sep"></span>
+  <button id="btn-all-cut" title="전체 cut">전체 cut</button>
+  <button id="btn-all-keep" title="전체 keep">전체 keep</button>
+  <button id="btn-invert" title="선택 반전">반전</button>
+  <button id="btn-only-keep" title="체크된 것만 keep, 나머지 cut" style="background:#c9a84c;color:#1a1f3c;border:none;">체크만 keep</button>
+  <span class="sep"></span>
+  <button id="btn-accept-recs" title="컷 권장 일괄 적용">AI 컷 권장 적용</button>
+  <span class="sep"></span>
+  <input id="plan-name" placeholder="버전 이름" style="width:120px">
+  <button id="btn-save-plan">💾 저장</button>
+  <select id="plan-select" style="width:140px"><option value="">불러오기...</option></select>
+  <span class="duration" id="duration">총 0:00 / <span class="sel">선택 0:00</span></span>
+  <span class="sep"></span>
+  <button id="btn-ai-emphasis" title="Gemma 4가 강조 단어 자동 표시">✨ AI 강조</button>
+  <button id="btn-ai-clips" title="Gemma 4 클립 추천">🎬 AI 클립</button>
+  <span class="sep"></span>
+  <button class="export-btn" id="btn-export">📥 내보내기</button>
+</div>
+
+<div id="layout">
+  <div id="player-panel">
+    <video id="player" controls preload="metadata"></video>
+    <audio id="player-audio" controls preload="metadata" style="width:100%;display:none"></audio>
+    <div class="player-info" id="player-info">Job: -</div>
+    <div class="timeline-nav">
+      <h4>5분 단위 점프</h4>
+      <div id="timeline-buttons"></div>
+    </div>
+    <div class="legend">
+      <strong>마커</strong>
+      <div class="legend-item"><div class="legend-marker" style="background:#333"></div>일반</div>
+      <div class="legend-item"><div class="legend-marker" style="background:#ef5350"></div>컷 권장</div>
+      <div class="legend-item"><div class="legend-marker" style="background:#4caf50"></div>클라이맥스</div>
+      <div class="legend-item"><div class="legend-marker" style="background:#c9a84c"></div>Shorts 후보</div>
+      <strong style="margin-top:8px">조작</strong>
+      <div>단어 클릭 → 영상 점프</div>
+      <div>단어 더블클릭 → 텍스트 수정</div>
+      <div>Shift+클릭 → 범위 선택</div>
+      <div>Backspace → 컷</div>
+      <div>⋮⋮ 핸들 → 단락 reorder</div>
+      <div>체크박스 → 일괄 선택</div>
+    </div>
+  </div>
+  <div id="transcript-panel">
+    <div id="empty">Loading transcript...</div>
+  </div>
+</div>
+
+<script>
+(function() {
+  "use strict";
+  var jobId = window.location.pathname.split("/").pop();
+  var transcript = null;
+  var recs = null;
+  var segmentOrder = [];
+  var cutWords = new Set();
+  var selectedWords = new Set();
+  var selectedSegments = new Set();
+  var wordEdits = {};  // { "s0w1": "수정된 텍스트" }
+  var history = [];
+  var historyIdx = -1;
+  var lastClickedWordId = null;
+  var lastCheckedSegIdx = null;
+
+  var player = document.getElementById("player");
+  var panel = document.getElementById("transcript-panel");
+
+  player.src = "/api/job/" + jobId + "/video";
+  // Detect media_type and swap player
+  fetch("/api/job/" + jobId + "/meta").then(r => r.json()).then(meta => {
+    if (meta.media_type === "audio") {
+      var v = document.getElementById("player");
+      var a = document.getElementById("player-audio");
+      v.pause(); v.removeAttribute("src"); v.style.display = "none";
+      a.src = "/api/job/" + jobId + "/audio";
+      a.style.display = "block";
+      // Re-target player variable to audio for rest of script
+      window.__player_real = a;
+      document.getElementById("player-info").textContent = "Job: " + jobId + " (오디오)";
+    }
+  });
+  // Override player references to use real (audio or video)
+  var _origPlayer = player;
+  Object.defineProperty(window, "_active_player", { get: function() { return window.__player_real || _origPlayer; } });
+
+  document.getElementById("player-info").textContent = "Job: " + jobId;
+
+  Promise.all([
+    fetch("/api/job/" + jobId + "/transcript").then(r => r.json()),
+    fetch("/api/job/" + jobId + "/recommendations").then(r => r.ok ? r.json() : { by_segment_idx: [] }),
+    fetch("/api/job/" + jobId + "/edit-plan").then(r => r.ok ? r.json() : [])
+  ]).then(([t, r, plans]) => {
+    transcript = t;
+    recs = r.by_segment_idx || [];
+    if (!transcript || !transcript.segments) { panel.innerHTML = '<div id="empty">전사 데이터가 비어있습니다.</div>'; return; }
+    segmentOrder = transcript.segments.map((_, i) => i);
+    // Apply existing word edits from server-loaded transcript
+    transcript.segments.forEach((seg, sIdx) => {
+      (seg.words || []).forEach((w, wIdx) => {
+        if (w.edited) wordEdits[wid(sIdx, wIdx)] = w.word;
+      });
+    });
+    pushHistory();
+    renderTimelineButtons();
+    renderPlanSelect(plans);
+    render();
+  }).catch(err => {
+    panel.innerHTML = '<div id="empty">로딩 실패: ' + err.message + '</div>';
+  });
+
+  function wid(s, w) { return "s" + s + "w" + w; }
+
+  function fmtTime(s) {
+    s = Math.max(0, Math.floor(s));
+    return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  }
+
+  function escapeHtml(s) { return (s || "").replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#39;" })[c]); }
+
+  function recLabel(k) { return k === "cut_suggested" ? "컷 권장" : k === "climax" ? "클라이맥스" : k === "shorts" ? "Shorts" : ""; }
+
+  function renderTimelineButtons() {
+    var dur = transcript.segments[transcript.segments.length - 1].end;
+    var buttons = '';
+    for (var t = 0; t <= dur; t += 300) {  // 5분 단위
+      buttons += '<button data-jump="' + t + '">' + fmtTime(t) + ' →</button>';
+    }
+    document.getElementById("timeline-buttons").innerHTML = buttons;
+    document.querySelectorAll("[data-jump]").forEach(b => {
+      b.addEventListener("click", () => {
+        var t = parseFloat(b.dataset.jump);
+        // Find first segment with start >= t
+        var idx = transcript.segments.findIndex(s => s.start >= t);
+        if (idx < 0) return;
+        var displayIdx = segmentOrder.indexOf(idx);
+        if (displayIdx < 0) return;
+        var el = document.querySelector('[data-display-idx="' + displayIdx + '"]');
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+  }
+
+  function renderPlanSelect(plans) {
+    var sel = document.getElementById("plan-select");
+    sel.innerHTML = '<option value="">불러오기...</option>' +
+      plans.map(p => '<option value="' + p.filename + '">' + escapeHtml(p.name) + ' (' + p.decision_count + ')</option>').join("");
+  }
+
+  function render() {
+    panel.innerHTML = "";
+    var frag = document.createDocumentFragment();
+    segmentOrder.forEach((segIdx, displayIdx) => {
+      var seg = transcript.segments[segIdx];
+      var rec = recs[segIdx] || { kind: "keep", reason: "" };
+      var div = document.createElement("div");
+      div.className = "segment";
+      if (selectedSegments.has(segIdx)) div.classList.add("selected");
+      // segment is "cut" if all words inside are cut
+      var allCut = (seg.words || []).every((_, wi) => cutWords.has(wid(segIdx, wi)));
+      if (allCut && (seg.words || []).length > 0) div.classList.add("cut");
+      div.dataset.segIdx = segIdx;
+      div.dataset.displayIdx = displayIdx;
+      div.dataset.rec = rec.kind;
+
+      var html = '<div class="segment-controls">' +
+        '<input type="checkbox" class="seg-checkbox" data-seg-idx="' + segIdx + '"' + (selectedSegments.has(segIdx) ? ' checked' : '') + '>' +
+        '<span class="drag-handle" draggable="true">⋮⋮</span>' +
+        '</div>' +
+        '<div class="segment-marker"></div>' +
+        '<div class="segment-meta">' +
+        '<span>' + fmtTime(seg.start) + '</span>';
+      if (rec.kind !== "keep") html += '<span class="rec-badge ' + rec.kind + '">' + recLabel(rec.kind) + '</span>';
+      if (rec.reason) html += '<span style="color:#555">· ' + rec.reason + '</span>';
+      html += '</div><div class="words">';
+      (seg.words || []).forEach((w, wi) => {
+        var id = wid(segIdx, wi);
+        var classes = "word";
+        if (cutWords.has(id)) classes += " cut";
+        if (selectedWords.has(id)) classes += " selected";
+        if (wordEdits[id]) classes += " edited";
+        if (aiEmphasis.has(id)) classes += " ai-emphasis";
+        var text = wordEdits[id] || w.word;
+        html += '<span class="' + classes + '" data-wid="' + id + '" data-start="' + w.start + '">' + escapeHtml(text) + '</span>';
+      });
+      html += '</div>';
+      div.innerHTML = html;
+      frag.appendChild(div);
+    });
+    panel.appendChild(frag);
+    bindEvents();
+    updateDuration();
+    rebuildWordIndex();
+  }
+
+  function bindEvents() {
+    // Word click
+    document.querySelectorAll(".word").forEach(el => {
+      el.addEventListener("click", e => {
+        if (el.contentEditable === "true") return;
+        var id = el.dataset.wid;
+        if (cutWords.has(id)) { cutWords.delete(id); pushHistory(); render(); return; }
+        var start = parseFloat(el.dataset.start);
+        (window._active_player||player).currentTime = start;
+        (window._active_player||player).play().catch(() => {});
+        if (e.shiftKey && lastClickedWordId) {
+          selectRange(lastClickedWordId, id);
+        } else if (e.metaKey || e.ctrlKey) {
+          if (selectedWords.has(id)) selectedWords.delete(id); else selectedWords.add(id);
+        } else {
+          selectedWords.clear();
+          selectedWords.add(id);
+        }
+        lastClickedWordId = id;
+        render();
+      });
+      el.addEventListener("dblclick", e => {
+        e.preventDefault();
+        e.stopPropagation();
+        startInlineEdit(el);
+      });
+    });
+
+    // Segment checkbox
+    document.querySelectorAll(".seg-checkbox").forEach(cb => {
+      cb.addEventListener("click", e => {
+        e.stopPropagation();
+        var idx = parseInt(cb.dataset.segIdx);
+        if (e.shiftKey && lastCheckedSegIdx !== null) {
+          // range select
+          var orderedIdxs = segmentOrder;
+          var a = orderedIdxs.indexOf(lastCheckedSegIdx);
+          var b = orderedIdxs.indexOf(idx);
+          if (a >= 0 && b >= 0) {
+            var [s, e2] = a < b ? [a, b] : [b, a];
+            for (var i = s; i <= e2; i++) selectedSegments.add(orderedIdxs[i]);
+          }
+        } else {
+          if (selectedSegments.has(idx)) selectedSegments.delete(idx);
+          else selectedSegments.add(idx);
+        }
+        lastCheckedSegIdx = idx;
+        render();
+      });
+    });
+
+    // Drag handle
+    document.querySelectorAll(".drag-handle").forEach(handle => {
+      var seg = handle.closest(".segment");
+      handle.addEventListener("dragstart", e => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", seg.dataset.displayIdx);
+        seg.classList.add("dragging");
+      });
+      handle.addEventListener("dragend", e => seg.classList.remove("dragging"));
+    });
+    document.querySelectorAll(".segment").forEach(el => {
+      el.addEventListener("dragover", e => { e.preventDefault(); el.classList.add("drop-target"); });
+      el.addEventListener("dragleave", e => el.classList.remove("drop-target"));
+      el.addEventListener("drop", e => {
+        e.preventDefault();
+        el.classList.remove("drop-target");
+        var fromIdx = parseInt(e.dataTransfer.getData("text/plain"));
+        var toIdx = parseInt(el.dataset.displayIdx);
+        if (isNaN(fromIdx) || isNaN(toIdx) || fromIdx === toIdx) return;
+        var [moved] = segmentOrder.splice(fromIdx, 1);
+        segmentOrder.splice(toIdx, 0, moved);
+        pushHistory();
+        render();
+      });
+    });
+  }
+
+  function startInlineEdit(el) {
+    var id = el.dataset.wid;
+    var origText = el.textContent;
+    el.contentEditable = "true";
+    el.focus();
+    document.execCommand("selectAll", false, null);
+    var finish = (commit) => {
+      el.contentEditable = "false";
+      var newText = el.textContent.trim();
+      if (commit && newText && newText !== origText) {
+        wordEdits[id] = newText;
+        // Save to server async
+        fetch("/api/job/" + jobId + "/transcript-edits", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ edits: wordEdits })
+        }).catch(() => {});
+        pushHistory();
+      }
+      render();
+    };
+    el.addEventListener("blur", () => finish(true), { once: true });
+    el.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); el.blur(); }
+      else if (e.key === "Escape") { el.textContent = origText; el.blur(); finish(false); }
+    });
+  }
+
+  function selectRange(fromId, toId) {
+    selectedWords.clear();
+    var allIds = [];
+    document.querySelectorAll(".word").forEach(el => allIds.push(el.dataset.wid));
+    var i1 = allIds.indexOf(fromId);
+    var i2 = allIds.indexOf(toId);
+    if (i1 < 0 || i2 < 0) return;
+    var [a, b] = i1 < i2 ? [i1, i2] : [i2, i1];
+    for (var i = a; i <= b; i++) selectedWords.add(allIds[i]);
+  }
+
+  function updateDuration() {
+    var total = 0, kept = 0;
+    transcript.segments.forEach((seg, segIdx) => {
+      (seg.words || []).forEach((w, wi) => {
+        var dur = (w.end - w.start);
+        total += dur;
+        if (!cutWords.has(wid(segIdx, wi))) kept += dur;
+      });
+    });
+    document.getElementById("duration").innerHTML = "총 " + fmtTime(total) + " / <span class=\"sel\">선택 " + fmtTime(kept) + "</span>";
+  }
+
+  /* History */
+  function pushHistory() {
+    history = history.slice(0, historyIdx + 1);
+    history.push({
+      cuts: new Set(cutWords),
+      order: segmentOrder.slice(),
+      selected: new Set(selectedWords),
+      segs: new Set(selectedSegments),
+      edits: { ...wordEdits },
+    });
+    historyIdx++;
+    if (history.length > 100) { history.shift(); historyIdx--; }
+    updateUndoBtn();
+  }
+  function undo() { if (historyIdx > 0) { historyIdx--; applyHistory(); } }
+  function redo() { if (historyIdx < history.length - 1) { historyIdx++; applyHistory(); } }
+  function applyHistory() {
+    var h = history[historyIdx];
+    cutWords = new Set(h.cuts);
+    segmentOrder = h.order.slice();
+    selectedWords = new Set(h.selected);
+    selectedSegments = new Set(h.segs);
+    wordEdits = { ...h.edits };
+    render();
+    updateUndoBtn();
+  }
+  function updateUndoBtn() {
+    document.getElementById("btn-undo").disabled = historyIdx <= 0;
+    document.getElementById("btn-redo").disabled = historyIdx >= history.length - 1;
+  }
+
+  /* Cut/restore */
+  function cutSelected() {
+    if (selectedWords.size === 0 && selectedSegments.size === 0) {
+      // No selection: cut current playing word
+      var pl = document.querySelector(".word.playing");
+      if (pl) selectedWords.add(pl.dataset.wid);
+    }
+    selectedWords.forEach(id => cutWords.add(id));
+    selectedSegments.forEach(segIdx => {
+      var seg = transcript.segments[segIdx];
+      (seg.words || []).forEach((_, wi) => cutWords.add(wid(segIdx, wi)));
+    });
+    selectedWords.clear();
+    pushHistory(); render();
+  }
+  function restoreSelected() {
+    if (selectedSegments.size > 0) {
+      selectedSegments.forEach(segIdx => {
+        var seg = transcript.segments[segIdx];
+        (seg.words || []).forEach((_, wi) => cutWords.delete(wid(segIdx, wi)));
+      });
+    }
+    selectedWords.forEach(id => cutWords.delete(id));
+    selectedWords.clear();
+    pushHistory(); render();
+  }
+
+  /* Bulk */
+  function allCut() {
+    transcript.segments.forEach((seg, segIdx) => {
+      (seg.words || []).forEach((_, wi) => cutWords.add(wid(segIdx, wi)));
+    });
+    pushHistory(); render();
+  }
+  function allKeep() {
+    cutWords.clear();
+    pushHistory(); render();
+  }
+  function invertCut() {
+    var newCuts = new Set();
+    transcript.segments.forEach((seg, segIdx) => {
+      (seg.words || []).forEach((_, wi) => {
+        var id = wid(segIdx, wi);
+        if (!cutWords.has(id)) newCuts.add(id);
+      });
+    });
+    cutWords = newCuts;
+    pushHistory(); render();
+  }
+  function onlyKeepChecked() {
+    if (selectedSegments.size === 0) { showToast("체크된 단락이 없습니다."); return; }
+    cutWords.clear();
+    transcript.segments.forEach((seg, segIdx) => {
+      if (selectedSegments.has(segIdx)) return;
+      (seg.words || []).forEach((_, wi) => cutWords.add(wid(segIdx, wi)));
+    });
+    pushHistory(); render();
+  }
+  function acceptRecs() {
+    recs.forEach(r => {
+      if (r.kind === "cut_suggested") {
+        var seg = transcript.segments[r.idx];
+        (seg.words || []).forEach((_, wi) => cutWords.add(wid(r.idx, wi)));
+      }
+    });
+    pushHistory(); render();
+  }
+
+  /* Save / load plan */
+  function buildEditPlan() {
+    var decisions = [];
+    segmentOrder.forEach(segIdx => {
+      var seg = transcript.segments[segIdx];
+      var words = seg.words || [];
+      var i = 0;
+      while (i < words.length) {
+        var isKept = !cutWords.has(wid(segIdx, i));
+        var j = i;
+        while (j < words.length && (!cutWords.has(wid(segIdx, j))) === isKept) j++;
+        if (isKept) decisions.push({ type: "keep", in_sec: words[i].start, out_sec: words[j - 1].end });
+        i = j;
+      }
+    });
+    return { decisions: decisions, segmentOrder: segmentOrder.slice(), cutWords: Array.from(cutWords), wordEdits: wordEdits };
+  }
+  function savePlan() {
+    var name = document.getElementById("plan-name").value.trim();
+    if (!name) { showToast("버전 이름을 입력하세요"); return; }
+    var plan = buildEditPlan();
+    plan.name = name;
+    fetch("/api/job/" + jobId + "/edit-plan", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(plan)
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          showToast("저장됨: " + data.name);
+          fetch("/api/job/" + jobId + "/edit-plan").then(r => r.json()).then(plans => renderPlanSelect(plans));
+        } else { showToast("저장 실패"); }
+      })
+      .catch(err => showToast("실패: " + err.message));
+  }
+  function loadPlan(filename) {
+    if (!filename) return;
+    fetch("/api/job/" + jobId + "/edit-plan/" + filename).then(r => r.json()).then(plan => {
+      if (plan.cutWords) cutWords = new Set(plan.cutWords);
+      if (plan.segmentOrder) segmentOrder = plan.segmentOrder.slice();
+      if (plan.wordEdits) wordEdits = { ...plan.wordEdits };
+      pushHistory(); render();
+      showToast("불러옴: " + plan._name);
+    });
+  }
+
+  function exportEdit() {
+    var plan = buildEditPlan();
+    plan.name = document.getElementById("plan-name").value.trim() || "edited";
+    if (plan.decisions.length === 0) { alert("선택된 부분이 없습니다."); return; }
+    var btn = document.getElementById("btn-export");
+    btn.disabled = true; btn.textContent = "내보내는 중...";
+    fetch("/api/job/" + jobId + "/export", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(plan)
+    }).then(r => r.json()).then(data => {
+      btn.disabled = false; btn.textContent = "📥 내보내기";
+      if (data.output) {
+        var url = "/api/job/" + jobId + "/output/" + encodeURIComponent(data.filename);
+        showToast('완료: ' + data.filename);
+        var a = document.createElement("a");
+        a.href = url; a.download = data.filename; a.click();
+      } else { alert("실패: " + (data.error || "unknown")); }
+    }).catch(err => {
+      btn.disabled = false; btn.textContent = "📥 내보내기";
+      alert("실패: " + err.message);
+    });
+  }
+
+  function showToast(msg) {
+    var t = document.createElement("div");
+    t.className = "toast"; t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
+  }
+
+  /* Auto-scroll on play (rAF + binary search; built once per render) */
+  var __wordIdx = { starts: [], els: [] };
+  var __lastHL = null;
+  var __lastScrollT = 0;
+  function rebuildWordIndex() {
+    var els = document.querySelectorAll(".word");
+    var starts = new Array(els.length);
+    for (var i = 0; i < els.length; i++) starts[i] = parseFloat(els[i].dataset.start) || 0;
+    __wordIdx = { starts: starts, els: Array.prototype.slice.call(els) };
+    __lastHL = null;
+  }
+  function findWordAt(t) {
+    var s = __wordIdx.starts, n = s.length;
+    if (n === 0) return -1;
+    if (t < s[0]) return -1;
+    var lo = 0, hi = n - 1;
+    while (lo < hi) {
+      var mid = (lo + hi + 1) >>> 1;
+      if (s[mid] <= t) lo = mid; else hi = mid - 1;
+    }
+    return lo;
+  }
+  function highlightLoop() {
+    var pl = window._active_player || player;
+    if (pl && !pl.paused && __wordIdx.els.length) {
+      var t = pl.currentTime;
+      var idx = findWordAt(t);
+      if (idx >= 0) {
+        var el = __wordIdx.els[idx];
+        if (el !== __lastHL) {
+          if (__lastHL) __lastHL.classList.remove("playing");
+          el.classList.add("playing");
+          __lastHL = el;
+          var now = performance.now();
+          if (now - __lastScrollT > 400) {
+            var rect = el.getBoundingClientRect();
+            var panelRect = panel.getBoundingClientRect();
+            if (rect.top < panelRect.top + 60 || rect.bottom > panelRect.bottom - 60) {
+              el.scrollIntoView({ behavior: "smooth", block: "center" });
+              __lastScrollT = now;
+            }
+          }
+        }
+      }
+    }
+    requestAnimationFrame(highlightLoop);
+  }
+  requestAnimationFrame(highlightLoop);
+
+  /* AI emphasis (Gemma 4) */
+  var aiEmphasis = new Set();  // Set<wordId>
+  
+  document.getElementById("btn-ai-emphasis").addEventListener("click", async () => {
+    var btn = document.getElementById("btn-ai-emphasis");
+    var orig = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "✨ 분석 중...";
+    try {
+      var r = await fetch("/api/job/" + jobId + "/llm-emphasis", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: "{}"
+      });
+      var d = await r.json();
+      aiEmphasis = new Set(d.emphasis_ids || []);
+      render();
+      showToast("✨ AI 강조 " + aiEmphasis.size + "개 단어 적용");
+    } catch (e) {
+      showToast("AI 강조 실패: " + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = orig;
+    }
+  });
+  
+  document.getElementById("btn-ai-clips").addEventListener("click", async () => {
+    var panel = document.getElementById("ai-clip-panel");
+    var list = document.getElementById("ai-clip-list");
+    panel.classList.add("show");
+    list.innerHTML = "로딩 중...";
+    try {
+      var r = await fetch("/api/job/" + jobId + "/llm-clips", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({n: 5, reasoning: false})
+      });
+      var d = await r.json();
+      var clips = d.clips || [];
+      if (!clips.length) {
+        list.innerHTML = "<div style=\"color:#999\">클립 없음</div>";
+        return;
+      }
+      list.innerHTML = clips.map((c, i) => {
+        var arch = (c.hook_archetype || "?");
+        var score = c.virality_score || 0;
+        var hook = (c.hook_text || "").substring(0, 200);
+        var why = (c.why_it_works || "").substring(0, 150);
+        var dur = (c.end_sec - c.start_sec) + "s";
+        var ts = formatTime(c.start_sec) + " - " + formatTime(c.end_sec);
+        return '<div class="clip-item" data-idx="' + i + '">' +
+          '<div class="clip-meta"><span class="clip-arch">[' + escapeHtml(arch) + ']</span> ' +
+            ts + ' (' + dur + ')<span class="clip-score">' + score + '/10</span></div>' +
+          '<div class="clip-hook">' + escapeHtml(hook) + '</div>' +
+          '<div class="clip-why">' + escapeHtml(why) + '</div>' +
+          '<div class="clip-actions">' +
+            '<button class="clip-btn" data-act="play" data-start="' + c.start_sec + '">▶ 재생</button>' +
+            '<button class="clip-btn primary" data-act="keep" data-start="' + c.start_sec + '" data-end="' + c.end_sec + '">✂ 이 구간만 keep</button>' +
+          '</div>' +
+        '</div>';
+      }).join("");
+      // Bind clip buttons
+      list.querySelectorAll(".clip-btn").forEach(b => {
+        b.addEventListener("click", e => {
+          var act = b.dataset.act;
+          var s = parseFloat(b.dataset.start);
+          if (act === "play") {
+            (window._active_player || player).currentTime = s;
+            (window._active_player || player).play().catch(() => {});
+          } else if (act === "keep") {
+            var ee = parseFloat(b.dataset.end);
+            applyClipAsKeep(s, ee);
+          }
+        });
+      });
+    } catch (e) {
+      list.innerHTML = "<div style=\"color:#ef5350\">실패: " + e.message + "</div>";
+    }
+  });
+  
+  document.getElementById("ai-clip-close").addEventListener("click", () => {
+    document.getElementById("ai-clip-panel").classList.remove("show");
+  });
+  
+  function formatTime(sec) {
+    sec = Math.floor(sec || 0);
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+  
+  function applyClipAsKeep(startSec, endSec) {
+    // Cut all words OUTSIDE the range, keep words inside.
+    cutWords.clear();
+    selectedWords.clear();
+    transcript.segments.forEach((seg, sIdx) => {
+      (seg.words || []).forEach((w, wIdx) => {
+        var wStart = w.start || 0;
+        var wEnd = w.end || wStart;
+        if (wEnd < startSec || wStart > endSec) {
+          cutWords.add(wid(sIdx, wIdx));
+        }
+      });
+    });
+    pushHistory();
+    render();
+    showToast("이 구간(" + formatTime(startSec) + "-" + formatTime(endSec) + ")만 keep으로 설정");
+    document.getElementById("ai-clip-panel").classList.remove("show");
+  }
+  
+  /* Keyboard */
+  document.addEventListener("keydown", e => {
+    if (document.activeElement && document.activeElement.contentEditable === "true") return;
+    if (document.activeElement && document.activeElement.tagName === "INPUT") return;
+    if (e.key === "Backspace" || e.key === "Delete") { e.preventDefault(); cutSelected(); }
+    else if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
+    else if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) { e.preventDefault(); redo(); }
+  });
+
+  /* Topbar */
+  document.getElementById("btn-undo").addEventListener("click", undo);
+  document.getElementById("btn-redo").addEventListener("click", redo);
+  document.getElementById("btn-cut").addEventListener("click", cutSelected);
+  document.getElementById("btn-restore").addEventListener("click", restoreSelected);
+  document.getElementById("btn-all-cut").addEventListener("click", allCut);
+  document.getElementById("btn-all-keep").addEventListener("click", allKeep);
+  document.getElementById("btn-invert").addEventListener("click", invertCut);
+  document.getElementById("btn-only-keep").addEventListener("click", onlyKeepChecked);
+  document.getElementById("btn-accept-recs").addEventListener("click", acceptRecs);
+  document.getElementById("btn-save-plan").addEventListener("click", savePlan);
+  document.getElementById("plan-select").addEventListener("change", e => loadPlan(e.target.value));
+  document.getElementById("btn-export").addEventListener("click", exportEdit);
+})();
+</script>
+<div id="ai-clip-panel">
+  <div class="panel-header">
+    <span class="panel-title">🎬 AI 클립 추천 (Gemma 4)</span>
+    <button class="panel-close" id="ai-clip-close">✕</button>
+  </div>
+  <div id="ai-clip-list">로딩 중...</div>
+</div>
+</body>
+</html>

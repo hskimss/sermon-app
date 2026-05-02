@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.python-version
+
+# Sermon job data (heavy media files, do not commit)
+jobs/
+
+# Logs
+*.log
+/tmp/
+.DS_Store
+
+# Editor artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+.cursor/
+
+# OS
+Thumbs.db
+ehthumbs.db

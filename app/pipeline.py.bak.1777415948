@@ -1,0 +1,124 @@
+from __future__ import annotations
+"""4단계 파이프라인 — yt-dlp → ffmpeg trim → faster-whisper → done."""
+import imageio_ffmpeg
+_FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
+import os as _os
+from pathlib import Path as _PathTmp
+_os.environ["PATH"] = str(_PathTmp(__file__).resolve().parent.parent / ".venv" / "bin") + _os.pathsep + str(_PathTmp(_FFMPEG).parent) + _os.pathsep + _os.environ.get("PATH", "")
+
+import json
+import subprocess
+import threading
+from pathlib import Path
+from app.jobs import JOBS_DIR
+
+
+def _update_phase(job_id: str, phase: str, **extra) -> None:
+    p = JOBS_DIR / job_id / "meta.json"
+    meta = json.loads(p.read_text())
+    meta["phase"] = phase
+    for k, v in extra.items():
+        meta[k] = v
+    p.write_text(json.dumps(meta, ensure_ascii=False, indent=2))
+
+
+def download_youtube(youtube_url: str, out_path: Path, audio_only: bool = False) -> None:
+    if out_path.exists() and out_path.stat().st_size > 0:
+        return
+    yt = str(Path(__file__).resolve().parent.parent / ".venv" / "bin" / "yt-dlp")
+    audio_args = ["-x", "--audio-format", "mp3", "--audio-quality", "0"] if audio_only else []
+    strategies = [
+        [yt] + audio_args + ["--extractor-args", "youtube:player_client=android", "-o", str(out_path), youtube_url],
+        [yt] + audio_args + ["--cookies-from-browser", "chrome", "-o", str(out_path), youtube_url],
+        [yt] + audio_args + ["--extractor-args", "youtube:player_client=tv_simply", "-o", str(out_path), youtube_url],
+        [yt] + audio_args + ["--extractor-args", "youtube:player_client=web", "-o", str(out_path), youtube_url],
+    ]
+    last_err = None
+    for cmd in strategies:
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=600)
+            return
+        except subprocess.CalledProcessError as e:
+            last_err = e
+            continue
+    if last_err:
+        raise last_err
+
+
+def trim_video(src: Path, dst: Path, start_sec: int, end_sec: int, audio_only: bool = False) -> None:
+    if dst.exists() and dst.stat().st_size > 0:
+        return
+    duration = end_sec - start_sec
+    if audio_only:
+        cmd = [_FFMPEG, "-y", "-ss", str(start_sec), "-i", str(src),
+               "-t", str(duration), "-vn", "-c:a", "copy", str(dst)]
+    else:
+        cmd = [_FFMPEG, "-y", "-ss", str(start_sec), "-i", str(src),
+               "-t", str(duration), "-c", "copy", str(dst)]
+    subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=300)
+
+
+def transcribe(src: Path, dst: Path, model_size: str = "mlx-community/whisper-large-v3-mlx", job_id: str = None) -> None:
+    """Run mlx-whisper as subprocess, parse PROGRESS lines, update meta.json."""
+    if dst.exists() and dst.stat().st_size > 0:
+        return
+    import time
+    worker_script = Path(__file__).resolve().parent.parent / "scripts" / "transcribe_worker.py"
+    venv_python = Path(__file__).resolve().parent.parent / ".venv" / "bin" / "python"
+    proc = subprocess.Popen(
+        [str(venv_python), str(worker_script), str(src), str(dst), model_size],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+    last_update = 0
+    for line in proc.stdout:
+        line = line.strip()
+        if not line:
+            continue
+        if line.startswith("PROGRESS:") and job_id:
+            try:
+                _, pct, cur, total = line.split(":")
+                # Throttle meta.json writes (every 2 seconds)
+                now = time.time()
+                if now - last_update > 2:
+                    _update_phase(job_id, "transcribing",
+                                  progress_pct=round(float(pct), 1),
+                                  progress_frames=f"{cur}/{total}")
+                    last_update = now
+            except Exception:
+                pass
+        elif line.startswith("DONE:") and job_id:
+            _update_phase(job_id, "transcribing", progress_pct=100.0, progress_frames=line.split(":")[1])
+    proc.wait()
+    if proc.returncode != 0:
+        raise subprocess.CalledProcessError(proc.returncode, "transcribe_worker")
+
+
+
+def run_pipeline(job_id: str) -> None:
+    job_dir = JOBS_DIR / job_id
+    meta = json.loads((job_dir / "meta.json").read_text())
+    audio_only = (meta.get("media_type") == "audio")
+    src_ext = "mp3" if audio_only else "mp4"
+    src = job_dir / f"source.{src_ext}"
+    trimmed = job_dir / f"trimmed.{src_ext}"
+    transcript = job_dir / "transcript.json"
+    try:
+        _update_phase(job_id, "downloading")
+        download_youtube(meta["youtube_url"], src, audio_only=audio_only)
+        _update_phase(job_id, "trimming")
+        trim_video(src, trimmed, meta["start_sec"], meta["end_sec"], audio_only=audio_only)
+        _update_phase(job_id, "transcribing")
+        transcribe(trimmed, transcript, job_id=job_id)
+        _update_phase(job_id, "ready")
+    except subprocess.CalledProcessError as e:
+        _update_phase(job_id, "failed", error=f"subprocess: {e.stderr[:500] if e.stderr else str(e)}")
+    except Exception as e:
+        _update_phase(job_id, "failed", error=f"{type(e).__name__}: {str(e)[:500]}")
+
+
+def start_pipeline_async(job_id: str) -> None:
+    t = threading.Thread(target=run_pipeline, args=(job_id,), daemon=True)
+    t.start()

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sermon App v2</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0f1225; color: #e0e0e0; min-height: 100vh; padding: 40px 20px; }
+.container { max-width: 720px; margin: 0 auto; }
+.title { color: #c9a84c; font-size: 22px; font-weight: 700; margin-bottom: 24px; }
+.section { background: #1a1f3c; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+.section h2 { font-size: 14px; color: #999; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px; }
+label { display: block; font-size: 12px; color: #999; margin-bottom: 4px; margin-top: 14px; }
+label:first-of-type { margin-top: 0; }
+input[type="text"], input[type="number"] { width: 100%; padding: 9px 12px; background: #111430; border: 1px solid #2a2f4c; border-radius: 6px; color: #e0e0e0; font-size: 14px; outline: none; }
+input:focus { border-color: #c9a84c; }
+.time-row { display: flex; gap: 12px; }
+.time-row > div { flex: 1; }
+.radio-group { margin-top: 14px; }
+.radio-option { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 13px; cursor: pointer; }
+.radio-option input { accent-color: #c9a84c; }
+.target-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; margin-left: 22px; font-size: 12px; color: #888; }
+.target-row input { width: 70px; padding: 5px 8px; font-size: 13px; }
+.btn-primary { display: block; width: 100%; margin-top: 18px; padding: 12px; background: #c9a84c; color: #1a1f3c; font-size: 14px; font-weight: 700; border: none; border-radius: 6px; cursor: pointer; }
+.btn-primary:hover { background: #d4b65e; }
+.btn-toggle { background: transparent; color: #c9a84c; border: 1px solid #2a2f4c; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; margin-top: 8px; }
+.form-collapsed #form-fields { display: none; }
+.job-card { display: flex; gap: 12px; padding: 12px; background: #111430; border-radius: 8px; margin-bottom: 8px; align-items: center; transition: border-color 0.15s; border: 1px solid #2a2f4c; }
+.job-card:hover { border-color: #c9a84c; }
+.job-card .info { flex: 1; }
+.job-card .title-text { font-size: 14px; color: #e0e0e0; font-weight: 600; margin-bottom: 4px; word-break: break-all; }
+.job-card .meta { font-size: 11px; color: #888; }
+.job-card .actions a, .job-card .actions button { padding: 6px 12px; font-size: 12px; border-radius: 4px; text-decoration: none; cursor: pointer; border: 1px solid #2a2f4c; background: #1a1f3c; color: #c9a84c; }
+.job-card .actions a:hover, .job-card .actions button:hover { background: #c9a84c; color: #1a1f3c; }
+.phase-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; margin-left: 6px; }
+.phase-ready { background: rgba(76,175,80,0.2); color: #4caf50; }
+.phase-running { background: rgba(201,168,76,0.2); color: #c9a84c; }
+.phase-failed { background: rgba(239,83,80,0.2); color: #ef5350; }
+.empty-text { font-size: 12px; color: #555; text-align: center; padding: 20px; }
+.toast { position: fixed; bottom: 20px; right: 20px; background: #c9a84c; color: #1a1f3c; padding: 12px 20px; border-radius: 6px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1 class="title">🎬 Sermon App v2</h1>
+
+<div class="section" id="form-section">
+  <h2>새 작업</h2>
+  <button class="btn-toggle" id="btn-toggle-form">+ 새 영상 받아쓰기</button>
+  <div id="form-fields" style="display:none">
+    <label for="url">YouTube URL</label>
+    <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=... / live/... / shorts/...">
+    <label>설교 부분 (찬양·기도 제외)</label>
+    <div class="time-row">
+      <div><label for="start_time">시작</label><input type="text" id="start_time" placeholder="HH:MM:SS"></div>
+      <div><label for="end_time">종료</label><input type="text" id="end_time" placeholder="HH:MM:SS"></div>
+    </div>
+    <fieldset class="radio-group" style="border:none">
+      <legend style="font-size:11px;color:#888;margin-bottom:4px;text-transform:uppercase">출력 타입</legend>
+      <label class="radio-option"><input type="radio" name="media_type" value="video" checked> 영상 (mp4 + 자막)</label>
+      <label class="radio-option"><input type="radio" name="media_type" value="audio"> 오디오 (mp3 + 자막 + JSON)</label>
+    </fieldset>
+    <fieldset class="radio-group" style="border:none">
+      <label class="radio-option"><input type="radio" name="mode" value="shortform"> 숏폼</label>
+      <label class="radio-option"><input type="radio" name="mode" value="longform" checked> 롱폼</label>
+    </fieldset>
+    <div class="target-row">목표 길이 <input type="number" id="target_min" min="1" placeholder="분"> 분 (선택)</div>
+    <button class="btn-primary" id="btn-submit">받아쓰기 시작</button>
+  </div>
+</div>
+
+<div class="section">
+  <h2>📋 작업 목록</h2>
+  <div id="jobs-list"><div class="empty-text">로딩 중...</div></div>
+</div>
+
+</div>
+
+<script>
+(function() {
+  "use strict";
+
+  function parseTimeToSec(str) {
+    if (!str || !str.trim()) return null;
+    str = str.trim();
+    if (!/^[\d:]+$/.test(str)) return null;
+    var parts = str.split(":");
+    if (parts.length > 3) return null;
+    for (var i = 0; i < parts.length; i++) if (parts[i] === "" || isNaN(Number(parts[i]))) return null;
+    var nums = parts.map(Number);
+    if (nums.length === 1) return nums[0];
+    if (nums.length === 2) return nums[0] * 60 + nums[1];
+    return nums[0] * 3600 + nums[1] * 60 + nums[2];
+  }
+  function isValidYoutubeUrl(url) {
+    return /^https?:\/\/(www\.|m\.)?youtube\.com\/(watch\?v=|live\/|shorts\/|embed\/|v\/)/.test(url) ||
+           /^https?:\/\/youtu\.be\//.test(url);
+  }
+  function fmtDate(iso) {
+    if (!iso) return "-";
+    var d = new Date(iso);
+    return d.getMonth()+1 + "/" + d.getDate() + " " + String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+  }
+  function fmtDur(sec) {
+    sec = Math.max(0, Math.round(sec));
+    var m = Math.floor(sec/60), s = sec % 60;
+    return m + ":" + (s<10?"0":"") + s;
+  }
+  function escapeHtml(s) { return (s||"").replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]); }
+
+  function loadJobs() {
+    fetch("/api/jobs").then(r => r.json()).then(jobs => renderJobs(jobs));
+  }
+
+  function renderJobs(jobs) {
+    var el = document.getElementById("jobs-list");
+    if (!jobs || jobs.length === 0) { el.innerHTML = '<div class="empty-text">아직 작업 없음. 위에서 새 영상 추가</div>'; return; }
+    var html = jobs.map(j => {
+      var phaseCls = j.phase === "ready" ? "phase-ready" : j.phase === "failed" ? "phase-failed" : "phase-running";
+      var phaseLabel = j.phase === "ready" ? "✅ 완료" : j.phase === "failed" ? "❌ 실패" : "▶ " + j.phase;
+      var llmBadge = '';
+      if (j.has_llm_emphasis || j.has_llm_clips) {
+        var bits = [];
+        if (j.has_llm_emphasis) bits.push("강조");
+        if (j.has_llm_clips) bits.push("클립");
+        llmBadge = ' <span class="phase-badge" style="background:#3a2f1a;color:#d4b65e;border:1px solid #c9a84c;">✨ AI ' + bits.join("·") + '</span>';
+      }
+      var actions;
+      if (j.phase === "ready") {
+        actions = '<a href="/editor/' + j.job_id + '">편집기 →</a>';
+      } else if (j.phase === "failed") {
+        actions = '<button onclick="alert(\'에러: ' + escapeHtml(j.error || "unknown").replace(/'/g,"&#39;").substring(0,200) + '\')">에러 보기</button>';
+      } else {
+        actions = '<a href="/editor/' + j.job_id + '">진행 보기 →</a>';
+      }
+      return '<div class="job-card">' +
+        '<div class="info">' +
+          '<div class="title-text">' + escapeHtml(j.title || j.job_id) + 
+            ' <span class="phase-badge ' + phaseCls + '">' + phaseLabel + '</span>' + llmBadge +
+          '</div>' +
+          '<div class="meta">' + j.duration_min + '분 · ' + fmtDate(j.created_at) + ' · ' + escapeHtml(j.youtube_url.substring(0,60)) + '</div>' +
+          (function(){
+            if (j.phase === "transcribing" && j.progress_pct != null) {
+              var pct = Math.round(j.progress_pct);
+              var elap = j.elapsed_sec != null ? fmtDur(j.elapsed_sec) : "?";
+              var rem = j.remaining_sec != null ? fmtDur(j.remaining_sec) : "?";
+              var bar = '<div style="margin-top:6px;height:6px;background:#1a1f3c;border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:#c9a84c;transition:width .4s;"></div></div>';
+              var line = '<div class="meta" style="color:#c9a84c;margin-top:4px;">전사 중 · ' + pct + '% · ' + elap + ' / 약 ' + rem + ' 남음</div>';
+              return bar + line;
+            }
+            return "";
+          })() +
+        '</div>' +
+        '<div class="actions">' + actions + '</div>' +
+      '</div>';
+    }).join("");
+    el.innerHTML = html;
+  }
+
+  function showToast(msg) {
+    var t = document.createElement("div");
+    t.className = "toast"; t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
+  }
+
+  document.getElementById("btn-toggle-form").addEventListener("click", () => {
+    var ff = document.getElementById("form-fields");
+    ff.style.display = ff.style.display === "none" ? "block" : "none";
+  });
+
+  document.getElementById("btn-submit").addEventListener("click", () => {
+    var url = document.getElementById("url").value.trim();
+    var startStr = document.getElementById("start_time").value;
+    var endStr = document.getElementById("end_time").value;
+    var modeEls = document.querySelectorAll('input[name="mode"]');
+    var mode = "longform";
+    for (var i = 0; i < modeEls.length; i++) if (modeEls[i].checked) { mode = modeEls[i].value; break; }
+    var targetMin = document.getElementById("target_min").value;
+    if (!url) return alert("YouTube URL 입력");
+    if (!isValidYoutubeUrl(url)) return alert("올바른 YouTube URL\n(youtube.com/watch?v= / live/ / shorts/ / youtu.be/)");
+    if (!startStr.trim() || !endStr.trim()) return alert("시작/종료 시간 입력");
+    var startSec = parseTimeToSec(startStr); var endSec = parseTimeToSec(endStr);
+    if (startSec === null || endSec === null) return alert("시간 형식 (HH:MM:SS / MM:SS / SS)");
+    if (endSec <= startSec) return alert("종료 > 시작");
+    fetch("/api/job/new", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ youtube_url: url, media_type: ((document.querySelector("input[name=\'media_type\']:checked")||{}).value)||"video", start_sec: startSec, end_sec: endSec, mode: mode, target_sec: targetMin ? Number(targetMin) * 60 : null })
+    }).then(r => r.json()).then(data => {
+      showToast("작업 시작: " + data.job_id);
+      document.getElementById("form-fields").style.display = "none";
+      setTimeout(loadJobs, 500);
+    }).catch(err => alert("실패: " + err.message));
+  });
+
+  // Auto refresh jobs every 5s if there's any in-progress job
+  loadJobs();
+  setInterval(() => {
+    fetch("/api/jobs").then(r => r.json()).then(jobs => {
+      var hasRunning = jobs.some(j => j.phase !== "ready" && j.phase !== "failed");
+      renderJobs(jobs);
+    });
+  }, 2000);
+})();
+</script>
+</body>
+</html>
