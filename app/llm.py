@@ -164,3 +164,52 @@ def clean_transcript_text(text: str) -> str:
         max_tokens=len(text) * 2 + 100,
     )
     return out.strip()
+
+
+
+def rearrange_for_arc(clips: list) -> list:
+    """Level 1 — Reorder clips for narrative arc.
+    
+    Does NOT modify clip content (start/end times preserved). Only changes order.
+    Strongest hook → first; theological climax → middle; application/landing → last.
+    
+    Returns list of clips in new order. If LLM fails, returns input unchanged.
+    """
+    if not clips or len(clips) < 2:
+        return list(clips)
+    
+    # Compress for LLM context
+    compact = [
+        {"i": i, "archetype": c.get("hook_archetype", "?"),
+         "score": c.get("virality_score", 0),
+         "hook": (c.get("hook_text") or "")[:120],
+         "duration": int(c.get("end_sec", 0) - c.get("start_sec", 0))}
+        for i, c in enumerate(clips)
+    ]
+    sys_p = (
+        "You are a Christian sermon highlight-reel narrative arc designer. "
+        "You will rearrange a list of sermon clips into the most compelling viewing order. "
+        "RULES:\n"
+        "1. The clip with the strongest hook (curiosity, contradiction, direct challenge) goes FIRST — to capture attention.\n"
+        "2. The clip with the deepest theological revelation or emotional climax goes in the MIDDLE.\n"
+        "3. The clip with the clearest application/landing line goes LAST.\n"
+        "4. The remaining clips fill the build-up between hook and climax.\n"
+        "5. NEVER drop or duplicate clips. NEVER modify clip content.\n"
+        "Return only the reordered list of clip indices (i values), as JSON."
+    )
+    schema = '{"order": [int]}'
+    try:
+        out = chat_json(
+            sys_p + f"\n\nReturn JSON: {schema}",
+            json.dumps(compact, ensure_ascii=False),
+            think=False,
+            temperature=0.0,
+            max_tokens=300,
+            timeout=120,
+        )
+        order = out.get("order", [])
+        if not order or len(order) != len(clips) or set(order) != set(range(len(clips))):
+            return list(clips)
+        return [clips[i] for i in order]
+    except Exception:
+        return list(clips)

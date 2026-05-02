@@ -236,5 +236,104 @@ def api_llm_health():
     return jsonify({"ok": llm.health(), "host": llm.LLM_HOST, "model": llm.DEFAULT_MODEL})
 
 
+
+
+@app.route("/api/job/<job_id>/llm-bulk-export", methods=["POST"])
+def api_llm_bulk_export(job_id):
+    """Option 1 — export each AI-suggested clip as its own file."""
+    from app.jobs import JOBS_DIR, get_job_status
+    from app.editor import export_concat, export_audio
+    import json as _json, re as _re
+    job_dir = JOBS_DIR / job_id
+    body = request.get_json(silent=True) or {}
+    n = int(body.get("n", 5))
+    # Look for cached clips file (n=5 by default)
+    cached = list(job_dir.glob("llm_clips_*.json"))
+    if not cached:
+        return jsonify({"error": "no AI clips cached. Run /llm-clips first."}), 404
+    clips = _json.loads(cached[0].read_text()).get("clips", [])[:n]
+    if not clips:
+        return jsonify({"error": "empty clips"}), 404
+    media_type = (get_job_status(job_id) or {}).get("media_type", "video")
+    exporter = export_audio if media_type == "audio" else export_concat
+    outputs = []
+    errors = []
+    for i, c in enumerate(clips):
+        ins = float(c.get("start_sec", 0))
+        outs = float(c.get("end_sec", 0))
+        if outs <= ins:
+            continue
+        arch = _re.sub(r"[^a-zA-Z0-9]", "_", c.get("hook_archetype", "clip"))[:20]
+        score = c.get("virality_score", 0)
+        plan = {
+            "_name": f"clip{i+1}_{score}_{arch}",
+            "decisions": [{"type": "keep", "in_sec": ins, "out_sec": outs}],
+        }
+        try:
+            out = exporter(job_id, plan)
+            if out:
+                outputs.append({"index": i+1, "filename": out.name, "score": score, "archetype": c.get("hook_archetype")})
+            else:
+                errors.append({"index": i+1, "error": "exporter returned None"})
+        except Exception as e:
+            errors.append({"index": i+1, "error": f"{type(e).__name__}: {e}"})
+    return jsonify({"outputs": outputs, "errors": errors, "count": len(outputs)})
+
+
+@app.route("/api/job/<job_id>/llm-highlight-reel", methods=["POST"])
+def api_llm_highlight_reel(job_id):
+    """Option 2-A — AI rearranges clips for narrative arc, exports as single file."""
+    from app.jobs import JOBS_DIR, get_job_status
+    from app.editor import export_concat, export_audio
+    from app import llm
+    import json as _json
+    job_dir = JOBS_DIR / job_id
+    body = request.get_json(silent=True) or {}
+    n = int(body.get("n", 5))
+    cached = list(job_dir.glob("llm_clips_*.json"))
+    if not cached:
+        return jsonify({"error": "no AI clips cached. Run /llm-clips first."}), 404
+    clips = _json.loads(cached[0].read_text()).get("clips", [])[:n]
+    if len(clips) < 2:
+        return jsonify({"error": "need at least 2 clips"}), 400
+    # Level 1 — narrative arc rearrangement
+    rearranged = llm.rearrange_for_arc(clips)
+    # Build edit_plan with all clip ranges in new order
+    decisions = []
+    for c in rearranged:
+        ins = float(c.get("start_sec", 0))
+        outs = float(c.get("end_sec", 0))
+        if outs > ins:
+            decisions.append({"type": "keep", "in_sec": ins, "out_sec": outs})
+    if not decisions:
+        return jsonify({"error": "no valid clips after rearrangement"}), 500
+    plan = {"_name": f"highlight_reel_n{len(decisions)}", "decisions": decisions}
+    media_type = (get_job_status(job_id) or {}).get("media_type", "video")
+    exporter = export_audio if media_type == "audio" else export_concat
+    out = exporter(job_id, plan)
+    if not out:
+        return jsonify({"error": "export failed"}), 500
+    # Save the rearrangement decision for reference
+    (job_dir / "llm_highlight_arc.json").write_text(
+        _json.dumps({
+            "original_order": [{"i": i, "score": c.get("virality_score"),
+                                "archetype": c.get("hook_archetype"),
+                                "hook": (c.get("hook_text") or "")[:80]}
+                               for i, c in enumerate(clips)],
+            "rearranged_order": [{"score": c.get("virality_score"),
+                                  "archetype": c.get("hook_archetype"),
+                                  "hook": (c.get("hook_text") or "")[:80]}
+                                 for c in rearranged],
+            "output": out.name,
+        }, ensure_ascii=False, indent=2))
+    return jsonify({
+        "output": out.name,
+        "clip_count": len(decisions),
+        "rearranged": [{"score": c.get("virality_score"),
+                        "archetype": c.get("hook_archetype")}
+                       for c in rearranged]
+    })
+
+
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5001, debug=False)

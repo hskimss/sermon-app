@@ -730,7 +730,71 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #
     document.getElementById("ai-clip-panel").classList.remove("show");
   });
   
-  function formatTime(sec) {
+  document.getElementById("btn-bulk-export").addEventListener("click", async () => {
+    var btn = document.getElementById("btn-bulk-export");
+    var resultDiv = document.getElementById("ai-bulk-result");
+    var orig = btn.textContent;
+    btn.disabled = true; btn.textContent = "📦 export 중... (수 분 소요)";
+    resultDiv.style.display = "block";
+    resultDiv.innerHTML = "⏳ 5개 클립 각각 export 중...";
+    try {
+      var r = await fetch("/api/job/" + jobId + "/llm-bulk-export", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({n: 5})
+      });
+      var d = await r.json();
+      if (d.error) {
+        resultDiv.innerHTML = "❌ " + escapeHtml(d.error);
+      } else {
+        var lis = (d.outputs || []).map(o =>
+          '<li style="margin:4px 0;"><a href="/api/job/' + jobId + '/output/' + encodeURIComponent(o.filename) +
+          '" target="_blank" style="color:#d4b65e;">📄 ' + escapeHtml(o.filename) + '</a> ' +
+          '<span style="color:#888;font-size:11px;">[' + escapeHtml(o.archetype || "") + ', ' + o.score + '/10]</span></li>'
+        ).join("");
+        resultDiv.innerHTML = "✅ " + d.count + "개 export 완료:<ul style=\"margin:8px 0 0 16px;padding:0;\">" + lis + "</ul>" +
+          (d.errors && d.errors.length ? "<div style=\"color:#ef5350;margin-top:6px;\">에러 " + d.errors.length + "건</div>" : "");
+      }
+    } catch (e) {
+      resultDiv.innerHTML = "❌ " + e.message;
+    } finally {
+      btn.disabled = false; btn.textContent = orig;
+    }
+  });
+  
+  document.getElementById("btn-highlight-reel").addEventListener("click", async () => {
+    var btn = document.getElementById("btn-highlight-reel");
+    var resultDiv = document.getElementById("ai-bulk-result");
+    var orig = btn.textContent;
+    btn.disabled = true; btn.textContent = "🎞 reel 생성 중...";
+    resultDiv.style.display = "block";
+    resultDiv.innerHTML = "⏳ AI가 narrative arc로 재배열 + 합치는 중...";
+    try {
+      var r = await fetch("/api/job/" + jobId + "/llm-highlight-reel", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({n: 5})
+      });
+      var d = await r.json();
+      if (d.error) {
+        resultDiv.innerHTML = "❌ " + escapeHtml(d.error);
+      } else {
+        var arcInfo = (d.rearranged || []).map((c, i) =>
+          (i+1) + ". [" + escapeHtml(c.archetype || "") + " " + c.score + "/10]"
+        ).join(" → ");
+        resultDiv.innerHTML = "✅ Highlight reel 완료 (클립 " + d.clip_count + "개)<br>" +
+          "<div style=\"font-size:11px;color:#888;margin:6px 0;\">재배열: " + arcInfo + "</div>" +
+          '<a href="/api/job/' + jobId + '/output/' + encodeURIComponent(d.output) +
+          '" target="_blank" style="color:#d4b65e;">📥 ' + escapeHtml(d.output) + '</a>';
+      }
+    } catch (e) {
+      resultDiv.innerHTML = "❌ " + e.message;
+    } finally {
+      btn.disabled = false; btn.textContent = orig;
+    }
+  });
+  
+    function formatTime(sec) {
     sec = Math.floor(sec || 0);
     var m = Math.floor(sec / 60), s = sec % 60;
     return m + ":" + (s < 10 ? "0" : "") + s;
@@ -784,6 +848,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #
     <span class="panel-title">🎬 AI 클립 추천 (Gemma 4)</span>
     <button class="panel-close" id="ai-clip-close">✕</button>
   </div>
+  <div style="display:flex;gap:6px;margin-bottom:12px;">
+    <button class="clip-btn primary" id="btn-bulk-export" style="flex:1;">📦 5개 모두 export</button>
+    <button class="clip-btn" id="btn-highlight-reel" style="flex:1;">🎞 합쳐서 reel</button>
+  </div>
+  <div id="ai-bulk-result" style="display:none;font-size:12px;background:#0a0d1f;border-radius:4px;padding:8px;margin-bottom:10px;color:#d4b65e;"></div>
   <div id="ai-clip-list">로딩 중...</div>
 </div>
 </body>
