@@ -726,11 +726,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #
     }
   });
   
-  document.getElementById("ai-clip-close").addEventListener("click", () => {
+  // (P6 fix) ai-clip-close는 panel 안에 있어 이 시점에 DOM에 없음.
+  // P6 IIFE가 panel HTML 이후 parse되어 직접 부착함.
+  var _aiClose = document.getElementById("ai-clip-close");
+  if (_aiClose) _aiClose.addEventListener("click", () => {
     document.getElementById("ai-clip-panel").classList.remove("show");
   });
   
-  document.getElementById("btn-bulk-export").addEventListener("click", async () => {
+  var _btnBulk = document.getElementById("btn-bulk-export");
+  if (_btnBulk) _btnBulk.addEventListener("click", async () => {
     var btn = document.getElementById("btn-bulk-export");
     var resultDiv = document.getElementById("ai-bulk-result");
     var orig = btn.textContent;
@@ -762,7 +766,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #
     }
   });
   
-  document.getElementById("btn-highlight-reel").addEventListener("click", async () => {
+  var _btnReel = document.getElementById("btn-highlight-reel");
+  if (_btnReel) _btnReel.addEventListener("click", async () => {
     var btn = document.getElementById("btn-highlight-reel");
     var resultDiv = document.getElementById("ai-bulk-result");
     var orig = btn.textContent;
@@ -919,12 +924,49 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #
   });
 
   // ─── 3) capture-phase 가로채기 ─────────────────────────────────
+  // ON: HF 시각화 (capture phase 가로채기 우선)
   btnBulk.addEventListener("click", function (e) {
-    if (!chk.checked) return;  // OFF: 기존 handler 정상 실행
+    if (!chk.checked) return;  // OFF면 아래 OFF 핸들러로 패스
     e.stopImmediatePropagation();
     e.preventDefault();
     doHFBulkExport();
   }, true);
+  // OFF: 기존 FFmpeg 흐름 (원본 IIFE가 panel-DOM-순서 버그로 크래시했으므로 P6에서 다시 부착)
+  btnBulk.addEventListener("click", async function (e) {
+    if (chk.checked) return;  // ON일 때는 capture handler가 처리
+    var btn = btnBulk;
+    var orig = btn.textContent;
+    btn.disabled = true; btn.textContent = "📦 export 중... (수 분 소요)";
+    resultDiv.style.display = "block";
+    resultDiv.innerHTML = "⏳ 5개 클립 각각 export 중 (FFmpeg 모드)...";
+    try {
+      var r = await fetch("/api/job/" + jobId + "/llm-bulk-export", {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({n: 5})
+      });
+      var d = await r.json();
+      if (d.error) {
+        resultDiv.innerHTML = "❌ " + d.error;
+      } else {
+        var lis = (d.outputs || []).map(o =>
+          '<li style="margin:4px 0;"><a href="/api/job/' + jobId + '/output/' + encodeURIComponent(o.filename) +
+          '" target="_blank" style="color:#d4b65e;">📄 ' + o.filename + '</a> ' +
+          '<span style="color:#888;font-size:11px;">[' + (o.archetype || "") + ', ' + o.score + '/10]</span></li>'
+        ).join("");
+        resultDiv.innerHTML = "✅ " + d.count + "개 export 완료:<ul style=\"margin:8px 0 0 16px;padding:0;\">" + lis + "</ul>" +
+          (d.errors && d.errors.length ? "<div style=\"color:#ef5350;margin-top:6px;\">에러 " + d.errors.length + "건</div>" : "");
+      }
+    } catch (err) {
+      resultDiv.innerHTML = "❌ " + err.message;
+    } finally {
+      btn.disabled = false; btn.textContent = orig;
+    }
+  });
+  // 패널 close 버튼도 같은 이유로 P6에서 부착
+  var panelClose = document.getElementById("ai-clip-close");
+  if (panelClose) panelClose.addEventListener("click", () => {
+    document.getElementById("ai-clip-panel").classList.remove("show");
+  });
 
   btnReel.addEventListener("click", function (e) {
     if (!chk.checked) return;
