@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>sermon_short_v1</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+/* ─────────────────────────────────────────────
+   HOUSE STYLE — a_church_london_v1
+   페르소나 #3 §A 그대로
+   ───────────────────────────────────────────── */
+:root[data-house="a_church_london_v1"], :root {
+  --color-ink: #1A2236;
+  --color-parchment: #F5EFE0;
+  --color-charcoal: #0E1116;
+  --color-oxblood: #6B1F26;
+  --color-gold: #B8923A;
+  --color-emphasis: #D4AF37;
+
+  --font-scripture-ko: 'Sandoll Myungjo Neo1', 'Noto Serif KR', serif;
+  --font-scripture-en: 'Adobe Caslon Pro', 'EB Garamond', serif;
+  --font-ui: 'Pretendard Variable', 'Pretendard', -apple-system, sans-serif;
+  --font-title-ko: 'Ridibatang', 'Noto Serif KR', serif;
+}
+
+@font-face {
+  font-family: 'Pretendard Variable';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: local('Pretendard Variable'),
+       url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/woff2/PretendardVariable.woff2') format('woff2-variations');
+}
+@font-face {
+  font-family: 'Noto Serif KR';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Noto Serif KR'),
+       url('https://cdn.jsdelivr.net/gh/notofonts/noto-cjk/Serif/Variable/Subset/NotoSerifKR-VF.otf.woff2') format('woff2');
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { background: var(--color-charcoal); }
+body {
+  width: 1080px; height: 1920px;
+  overflow: hidden;
+  color: #FFFFFF;
+  font-family: var(--font-ui);
+}
+
+/* ─────────────────────────────────────────────
+   LAYOUT (9:16)
+   상단 220 / 본문 / 하단 270 안전영역
+   ───────────────────────────────────────────── */
+.safe-top    { position:absolute; top:0; left:0; right:0; height:220px; }
+.safe-bottom { position:absolute; bottom:0; left:0; right:0; height:270px; }
+.stage       { position:absolute; top:220px; bottom:270px; left:0; right:0; }
+
+/* 성구 카드 (등장 시점에만 표시) */
+.scripture-card {
+  position:absolute; left:64px; right:64px; top:60px;
+  background: rgba(245,239,224,0.06);
+  border-left: 4px solid var(--color-gold);
+  padding: 28px 36px;
+  opacity: 0;
+}
+.scripture-ref {
+  font-family: var(--font-ui);
+  font-weight: 700; font-size: 36px;
+  color: var(--color-gold);
+  letter-spacing: 0.02em; margin-bottom: 14px;
+}
+.scripture-text {
+  font-family: var(--font-scripture-ko);
+  font-weight: 600; font-size: 52px;
+  line-height: 1.45; word-break: keep-all;
+  color: var(--color-parchment);
+}
+.scripture-translation {
+  margin-top: 14px;
+  font-family: var(--font-ui);
+  font-size: 24px;
+  color: rgba(245,239,224,.55);
+}
+
+/* 자막 영역 (중앙) */
+.captions {
+  position:absolute; left:64px; right:64px;
+  top:50%; transform: translateY(-40%);
+  text-align:center;
+  font-family: var(--font-ui); font-weight: 800;
+  font-size: 96px; line-height: 1.18;
+  word-break: keep-all;
+}
+.captions .word {
+  display: inline-block; margin: 0 6px;
+  color: #FFFFFF;
+  -webkit-text-stroke: 6px #000;
+  paint-order: stroke fill;
+  opacity: 0; transform: scale(.92);
+  will-change: opacity, transform;
+}
+.captions .word.emphasis { color: var(--color-emphasis); }
+
+/* 브랜드 마크 (하단 우측, 마지막 5초만) */
+.brand-mark {
+  position:absolute; right:64px; bottom:60px;
+  font-family: var(--font-ui); font-weight: 600;
+  font-size: 28px; opacity: 0;
+  color: rgba(255,255,255,.7); letter-spacing: 0.04em;
+}
+
+/* 진행 게이지 (subtle) */
+.progress {
+  position:absolute; bottom:0; left:0;
+  height: 4px; width:0;
+  background: var(--color-gold); opacity:.6;
+}
+</style>
+</head>
+<body
+  data-composition-id="{{COMPOSITION_ID}}"
+  data-duration="{{DURATION_MS}}"
+  data-fps="30"
+  data-house="a_church_london_v1">
+
+<div class="safe-top"></div>
+<div class="stage">
+  <!-- 성구 카드: 등장 시점에 GSAP fade-in/out -->
+  <div class="scripture-card" id="scripture">
+    <div class="scripture-ref" id="scripture-ref">{{SCRIPTURE_REF}}</div>
+    <div class="scripture-text" id="scripture-text">{{SCRIPTURE_TEXT}}</div>
+    <div class="scripture-translation">{{SCRIPTURE_TRANS}}</div>
+  </div>
+
+  <!-- 자막: words placeholder, JS가 동적으로 채움 -->
+  <div class="captions" id="captions"></div>
+
+  <!-- 브랜드 -->
+  <div class="brand-mark" id="brand">{{CHANNEL}}</div>
+</div>
+<div class="safe-bottom"></div>
+<div class="progress" id="pb"></div>
+
+<script>
+/*
+ * 데이터 주입 방식
+ *   1) Server-side 치환:  __WORDS__ / __SCRIPTURE_REFS__ / __TOTAL_SEC__
+ *   2) 런타임 주입:         window.__renderData = {...} (HP hf-server가 inject)
+ */
+window.__WORDS__       = window.__WORDS__       || /*WORDS_JSON*/{{WORDS_JSON}};
+window.__SCRIPTURE_REFS__ = window.__SCRIPTURE_REFS__ || /*SCRIPTURE_REFS_JSON*/{{SCRIPTURE_REFS_JSON}};
+window.__TOTAL_SEC__   = window.__TOTAL_SEC__   || {{TOTAL_SEC}};
+
+window.__timelines = window.__timelines || {};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const TOTAL = Number(window.__TOTAL_SEC__) || 60;
+  const words = Array.isArray(window.__WORDS__) ? window.__WORDS__ : [];
+  const refs  = Array.isArray(window.__SCRIPTURE_REFS__) ? window.__SCRIPTURE_REFS__ : [];
+
+  // 1) 자막 DOM 생성
+  const cap = document.getElementById('captions');
+  cap.innerHTML = '';
+  const spans = words.map((w, i) => {
+    const span = document.createElement('span');
+    span.className = 'word' + (w.is_emphasis ? ' emphasis' : '');
+    span.dataset.wid = w.wid || ('w' + i);
+    span.textContent = (w.word || '').trim() + ' ';
+    cap.appendChild(span);
+    return span;
+  });
+
+  // 2) GSAP 타임라인
+  const tl = gsap.timeline({ paused: true });
+
+  // 자막 단어별 등장
+  spans.forEach((span, i) => {
+    const w = words[i];
+    if (!w) return;
+    const start = Math.max(0, Number(w.start) || 0);
+    tl.to(span, {
+      opacity: 1, scale: 1, duration: 0.08, ease: 'power2.out',
+    }, start);
+    if (w.is_emphasis) {
+      // bounce 1.0 → 1.08 → 1.0
+      tl.to(span, { scale: 1.08, duration: 0.18, ease: 'power2.out' }, start + 0.05)
+        .to(span, { scale: 1.00, duration: 0.20, ease: 'power2.in'  }, start + 0.23);
+    }
+  });
+
+  // 성구 카드 — 페르소나 #3 §3 (slide/typeon 금지, fade only)
+  if (refs.length) {
+    const refEl  = document.getElementById('scripture');
+    const refTxt = document.getElementById('scripture-ref');
+    const txtEl  = document.getElementById('scripture-text');
+    const trEl   = document.querySelector('.scripture-translation');
+
+    refs.forEach(r => {
+      const at = Number(r.appears_at_sec) || 0;
+      // 본문 텍스트는 미리 채워져 있거나 (placeholder), runtime이 fetch 가능하면 set
+      tl.call(() => {
+        if (r.text)        txtEl.textContent = r.text;
+        if (r.book)        refTxt.textContent = `${r.book} ${r.chapter}:${r.verse_start}` +
+                                                (r.verse_end && r.verse_end !== r.verse_start
+                                                  ? `-${r.verse_end}` : '');
+        if (r.translation) trEl.textContent  = r.translation;
+      }, [], at);
+      // read-time 추정: 성경 본문 길이 / 6 chars/sec, 최소 4s
+      const readSec = Math.max(4.0, ((r.text || '').length / 6.0) + 1.5);
+      tl.to(refEl,  { opacity: 1, duration: 0.7, ease: 'power2.out' }, at)
+        .to(refEl,  { opacity: 0, duration: 0.4, ease: 'power2.in'  }, at + readSec);
+    });
+  }
+
+  // 브랜드 마크 (마지막 5s)
+  tl.to('#brand', { opacity: 1, duration: 0.5 }, Math.max(0, TOTAL - 5));
+
+  // 진행 게이지
+  tl.to('#pb', { width: '100%', duration: TOTAL, ease: 'none' }, 0);
+
+  window.__timelines['{{COMPOSITION_ID}}'] = tl;
+  window.__hyperframes_ready = true;
+});
+</script>
+</body>
+</html>

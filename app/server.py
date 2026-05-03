@@ -335,5 +335,66 @@ def api_llm_highlight_reel(job_id):
     })
 
 
+# ── HyperFrames render endpoints (P2 — design HYPERFRAMES_DESIGN.md §2.3) ──
+@app.route("/api/job/<job_id>/render", methods=["POST"])
+def api_render(job_id):
+    """sermon-app → HP HyperFrames 렌더 서버로 작업 제출.
+
+    body:
+      {
+        "clip": {"start_sec": 92, "end_sec": 152, "hook_archetype": "..."},
+        "composition": "sermon_short_v1",   # default
+        "format": "9:16",                    # default
+        "quality": "1080p",                  # default
+        "callback_url": null,                # 옵션
+        "dry_run": false                     # true면 payload만 반환
+      }
+    """
+    from app.jobs import JOBS_DIR
+    from app.render import build_short_payload, HyperFramesClient, RenderError
+
+    body = request.get_json(silent=True) or {}
+    clip = body.get("clip") or {}
+    if "start_sec" not in clip or "end_sec" not in clip:
+        return jsonify({"error": "clip.start_sec/end_sec required"}), 400
+
+    try:
+        payload = build_short_payload(
+            job_id=job_id, clip=clip, jobs_dir=JOBS_DIR,
+            composition=body.get("composition", "sermon_short_v1"),
+            fmt=body.get("format", "9:16"),
+            quality=body.get("quality", "1080p"),
+            house_style=body.get("house_style", "a_church_london_v1"),
+            callback_url=body.get("callback_url"),
+        )
+    except FileNotFoundError as ex:
+        return jsonify({"error": str(ex)}), 404
+
+    if body.get("dry_run"):
+        return jsonify({"dry_run": True, "payload_preview": payload})
+
+    client = HyperFramesClient()
+    try:
+        result = client.submit(payload)
+    except RenderError as ex:
+        return jsonify({"error": str(ex), "hp_unreachable": True}), 502
+    return jsonify({**result, "render_engine": "hyperframes"})
+
+
+@app.route("/api/render/<render_id>/status", methods=["GET"])
+def api_render_status(render_id):
+    from app.render import HyperFramesClient, RenderError
+    try:
+        return jsonify(HyperFramesClient().status(render_id))
+    except RenderError as ex:
+        return jsonify({"error": str(ex)}), 502
+
+
+@app.route("/api/render/health", methods=["GET"])
+def api_render_health():
+    from app.render import HyperFramesClient
+    return jsonify({"ok": HyperFramesClient().health()})
+
+
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5001, debug=False)
