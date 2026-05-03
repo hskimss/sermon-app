@@ -393,7 +393,64 @@ def api_render_status(render_id):
 @app.route("/api/render/health", methods=["GET"])
 def api_render_health():
     from app.render import HyperFramesClient
-    return jsonify({"ok": HyperFramesClient().health()})
+    c = HyperFramesClient()
+    return jsonify({"ok": c.health(), "host": c.base_url})
+
+
+# Mac 측 mp4 캐시 — HP에서 한 번 받으면 재사용
+_RENDER_CACHE_DIR = Path.home() / ".cache" / "sermon-app" / "render"
+
+
+def _safe_render_id(rid: str) -> str:
+    """디렉토리 traversal 방지 — hex/영문숫자/`-_` 만 통과."""
+    import re as _re
+    if not _re.fullmatch(r"[A-Za-z0-9_\-]{4,64}", rid or ""):
+        from flask import abort
+        abort(400, description="invalid render_id")
+    return rid
+
+
+@app.route("/api/render/<render_id>/mp4", methods=["GET"])
+def api_render_mp4(render_id):
+    """HP에서 mp4 fetch + Mac 로컬 캐시 + send_file.
+
+    캐시 위치: ~/.cache/sermon-app/render/<render_id>.mp4
+    상태 의존: HP에서 status=ready 일 때만 fetch (아니면 409).
+    """
+    from app.render import HyperFramesClient, RenderError
+    from flask import send_file
+    rid = _safe_render_id(render_id)
+
+    cache_dir = _RENDER_CACHE_DIR
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_path = cache_dir / f"{rid}.mp4"
+
+    if not cache_path.exists():
+        client = HyperFramesClient()
+        # ready 인지 확인 (HP가 하루 보관하므로 status로 판단)
+        try:
+            st = client.status(rid)
+        except RenderError as ex:
+            return jsonify({"error": str(ex), "hp_unreachable": True}), 502
+        if st.get("status") != "ready":
+            return jsonify({"error": "not ready", "status": st.get("status")}), 409
+        # streaming download
+        try:
+            client.fetch_output(rid, cache_path)
+        except Exception as ex:
+            try:
+                cache_path.unlink()
+            except FileNotFoundError:
+                pass
+            return jsonify({"error": str(ex)}), 502
+
+    return send_file(
+        cache_path,
+        mimetype="video/mp4",
+        as_attachment=False,
+        conditional=True,  # Range 지원
+        download_name=f"{rid}.mp4",
+    )
 
 
 if __name__ == "__main__":

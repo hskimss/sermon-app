@@ -68,3 +68,16 @@ class HyperFramesClient:
                     if chunk:
                         f.write(chunk)
         return str(dest_path)
+
+    def stream_output(self, render_id: str, ext: str = "mp4",
+                      timeout: int = 600):
+        """HP에서 mp4 chunked stream을 그대로 반환 (Flask가 generator로 사용).
+
+        Returns:
+            requests.Response (with `iter_content`) — 호출자가 close 책임.
+        """
+        url = self.output_url(render_id, ext)
+        # raise_for_status 후 자체 close — Flask `send_file`/`Response(stream)` 패턴
+        r = requests.get(url, stream=True, timeout=timeout)
+        r.raise_for_status()
+        return r

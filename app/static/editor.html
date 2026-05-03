@@ -848,6 +848,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #
     <span class="panel-title">🎬 AI 클립 추천 (Gemma 4)</span>
     <button class="panel-close" id="ai-clip-close">✕</button>
   </div>
+  <div id="hf-toggle-row" style="margin-bottom:10px;padding:8px;background:#0a0d1f;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:8px;">
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+      <input type="checkbox" id="chk-hf-render">
+      <span>✨ <strong>HF 시각화</strong> — Pretendard 자막 + 골드 강조 + 성구 카드</span>
+    </label>
+    <span id="hf-status-pill" style="margin-left:auto;font-size:11px;color:#888;">확인 중…</span>
+  </div>
   <div style="display:flex;gap:6px;margin-bottom:12px;">
     <button class="clip-btn primary" id="btn-bulk-export" style="flex:1;">📦 5개 모두 export</button>
     <button class="clip-btn" id="btn-highlight-reel" style="flex:1;">🎞 합쳐서 reel</button>
@@ -855,5 +862,236 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #
   <div id="ai-bulk-result" style="display:none;font-size:12px;background:#0a0d1f;border-radius:4px;padding:8px;margin-bottom:10px;color:#d4b65e;"></div>
   <div id="ai-clip-list">로딩 중...</div>
 </div>
+<script>
+/* ────────────────────────────────────────────────────────────────
+ * P6 — HF 시각화 토글 (격리 IIFE)
+ * 기존 코드/click handler 손대지 않음. capture phase로 ON 상태만 가로챔.
+ * 회귀: 체크박스 OFF 상태에선 기존 동작 100% 유지.
+ * ──────────────────────────────────────────────────────────────── */
+(function () {
+  "use strict";
+  if (typeof jobId === "undefined" || !jobId) return;  // 다른 페이지면 skip
+
+  const POLL_MS = 5000;
+  const TIMEOUT_MS = 5 * 60 * 1000;          // 5분 hard timeout → fallback
+  const LS_KEY = "sermon-app:p6:active-renders:" + jobId;
+  const TOP_N = 5;
+
+  const chk = document.getElementById("chk-hf-render");
+  const pill = document.getElementById("hf-status-pill");
+  const btnBulk = document.getElementById("btn-bulk-export");
+  const btnReel = document.getElementById("btn-highlight-reel");
+  const resultDiv = document.getElementById("ai-bulk-result");
+  if (!chk || !pill || !btnBulk || !btnReel || !resultDiv) return;
+
+  // ─── 1) 페이지 로딩 시 health 1회 fetch ─────────────────────────
+  fetch("/api/render/health")
+    .then(r => r.json())
+    .then(d => {
+      if (d && d.ok) {
+        pill.textContent = "🟢 사용 가능";
+        pill.style.color = "#81c784";
+        chk.disabled = false;
+      } else {
+        setUnavailable("HP 다운 — FFmpeg 모드만");
+      }
+    })
+    .catch(() => setUnavailable("연결 실패 — FFmpeg 모드만"));
+
+  function setUnavailable(msg) {
+    pill.textContent = "🔴 " + msg;
+    pill.style.color = "#ef5350";
+    chk.checked = false;
+    chk.disabled = true;
+  }
+
+  // ─── 2) 체크박스 변화에 따라 reel 버튼 P4 대기 안내 ─────────────
+  chk.addEventListener("change", () => {
+    if (chk.checked) {
+      btnReel.disabled = true;
+      btnReel.title = "P4 reel composition 대기";
+      btnReel.style.opacity = "0.5";
+    } else {
+      btnReel.disabled = false;
+      btnReel.title = "";
+      btnReel.style.opacity = "";
+    }
+  });
+
+  // ─── 3) capture-phase 가로채기 ─────────────────────────────────
+  btnBulk.addEventListener("click", function (e) {
+    if (!chk.checked) return;  // OFF: 기존 handler 정상 실행
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    doHFBulkExport();
+  }, true);
+
+  btnReel.addEventListener("click", function (e) {
+    if (!chk.checked) return;
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    showToastMsg("P4 reel composition은 다음 phase에서 추가됩니다.");
+  }, true);
+
+  // ─── 4) 핵심 — HF Bulk Export ──────────────────────────────────
+  async function doHFBulkExport() {
+    btnBulk.disabled = true;
+    const orig = btnBulk.textContent;
+    btnBulk.textContent = "✨ HF 렌더 중…";
+    resultDiv.style.display = "block";
+    resultDiv.innerHTML = "⏳ AI 추천 클립 가져오는 중…";
+
+    try {
+      // (a) 추천 클립 5개 가져오기 — 이미 cache 가능
+      const recsR = await fetch("/api/job/" + jobId + "/llm-clips", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({n: TOP_N})
+      });
+      const recsD = await recsR.json();
+      const clips = (recsD.clips || []).slice(0, TOP_N);
+      if (!clips.length) {
+        resultDiv.innerHTML = "❌ 추천 클립 없음";
+        return;
+      }
+
+      // (b) 각 클립별 진행 상태 줄
+      const lines = clips.map((c, i) =>
+        `<div id="hf-line-${i}" style="margin:4px 0;">⏳ clip ${i+1}/${clips.length} ` +
+        `(${escapeHtmlSafe(c.archetype || "?")}/${c.score || "?"}) — queued</div>`
+      ).join("");
+      resultDiv.innerHTML =
+        "<div style='margin-bottom:6px;color:#81c784;'>✨ HF 시각화 모드</div>" + lines;
+
+      // (c) 순차 렌더
+      const results = [];
+      for (let i = 0; i < clips.length; i++) {
+        const c = clips[i];
+        const lineEl = document.getElementById("hf-line-" + i);
+        try {
+          const r = await renderOneClip(jobId, c, lineEl, i, clips.length);
+          results.push(r);
+        } catch (ex) {
+          lineEl.innerHTML = `❌ clip ${i+1}/${clips.length} ` +
+            `(${escapeHtmlSafe(c.archetype || "?")}) — ${escapeHtmlSafe(ex.message)}`;
+          lineEl.style.color = "#ef5350";
+          if (ex.fallback) results.push({fallback: true, idx: i});
+        }
+      }
+
+      // (d) 전체 fallback 필요 시 (모든 시도 실패)
+      const allFailed = results.length > 0 && results.every(r => r && r.fallback);
+      if (allFailed) {
+        showToastMsg("❌ 모든 HF 렌더 실패 — FFmpeg 모드 자동 전환");
+        await runFFmpegFallback();
+      }
+    } catch (ex) {
+      resultDiv.innerHTML = "❌ " + escapeHtmlSafe(ex.message);
+    } finally {
+      btnBulk.disabled = false;
+      btnBulk.textContent = orig;
+    }
+  }
+
+  async function renderOneClip(jobId, clip, lineEl, idx, total) {
+    const startTs = Date.now();
+    const submitR = await fetch("/api/job/" + jobId + "/render", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        clip: {
+          start_sec: clip.start_sec,
+          end_sec: clip.end_sec,
+          hook_archetype: clip.archetype,
+        }
+      })
+    });
+    if (submitR.status === 502) {
+      const e = new Error("HP unreachable"); e.fallback = true; throw e;
+    }
+    if (!submitR.ok) {
+      const e = new Error("submit " + submitR.status); e.fallback = true; throw e;
+    }
+    const submitD = await submitR.json();
+    const rid = submitD.render_id;
+    persistRender(rid, idx);
+
+    // polling
+    while (true) {
+      if (Date.now() - startTs > TIMEOUT_MS) {
+        const e = new Error("timeout 5분 초과"); e.fallback = true; throw e;
+      }
+      await sleepMs(POLL_MS);
+      const sR = await fetch("/api/render/" + rid + "/status");
+      if (!sR.ok) {
+        const e = new Error("status " + sR.status); e.fallback = true; throw e;
+      }
+      const sD = await sR.json();
+      const elapsed = Math.floor((Date.now() - startTs) / 1000);
+      if (sD.status === "rendering" || sD.status === "queued") {
+        lineEl.innerHTML = `⏳ clip ${idx+1}/${total} ` +
+          `(${escapeHtmlSafe(clip.archetype || "?")}/${clip.score || "?"}) — ${sD.status} ${elapsed}s`;
+      } else if (sD.status === "ready") {
+        const sizeMb = ((sD.size_bytes || 0) / 1024 / 1024).toFixed(1);
+        lineEl.innerHTML = `✓ clip ${idx+1}/${total} ` +
+          `(${escapeHtmlSafe(clip.archetype || "?")}/${clip.score || "?"}) — ${elapsed}s — ` +
+          `<a href="/api/render/${rid}/mp4" target="_blank" style="color:#d4b65e;">📥 ${sizeMb}MB</a>`;
+        clearRender(rid);
+        return {render_id: rid, size_bytes: sD.size_bytes, elapsed_sec: elapsed};
+      } else if (sD.status === "error" || sD.status === "failed") {
+        const e = new Error("render error: " + (sD.error || "?")); e.fallback = true; throw e;
+      }
+    }
+  }
+
+  async function runFFmpegFallback() {
+    resultDiv.innerHTML += "<div style='color:#ef5350;margin-top:6px;'>FFmpeg 모드로 자동 재시도 중…</div>";
+    try {
+      const r = await fetch("/api/job/" + jobId + "/llm-bulk-export", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({n: TOP_N})
+      });
+      const d = await r.json();
+      if (d.error) {
+        resultDiv.innerHTML += "<div style='color:#ef5350;'>FFmpeg fallback 실패: " + escapeHtmlSafe(d.error) + "</div>";
+      } else {
+        resultDiv.innerHTML += "<div style='color:#81c784;'>✓ FFmpeg fallback 완료 (" + d.count + "개)</div>";
+      }
+    } catch (ex) {
+      resultDiv.innerHTML += "<div style='color:#ef5350;'>FFmpeg fallback 예외: " + escapeHtmlSafe(ex.message) + "</div>";
+    }
+  }
+
+  // ─── 5) localStorage — 페이지 닫혀도 진행 추적 가능 ─────────────
+  function persistRender(rid, idx) {
+    try {
+      const cur = JSON.parse(localStorage.getItem(LS_KEY) || "[]");
+      cur.push({rid, idx, ts: Date.now()});
+      localStorage.setItem(LS_KEY, JSON.stringify(cur));
+    } catch (_) {}
+  }
+  function clearRender(rid) {
+    try {
+      const cur = JSON.parse(localStorage.getItem(LS_KEY) || "[]");
+      const next = cur.filter(x => x.rid !== rid);
+      localStorage.setItem(LS_KEY, JSON.stringify(next));
+    } catch (_) {}
+  }
+
+  // ─── 6) helpers ────────────────────────────────────────────────
+  function sleepMs(ms) { return new Promise(r => setTimeout(r, ms)); }
+  function escapeHtmlSafe(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function showToastMsg(msg) {
+    if (typeof showToast === "function") { showToast(msg); return; }
+    const t = document.createElement("div");
+    t.style.cssText = "position:fixed;bottom:20px;right:20px;background:#1a1f3c;color:#d4b65e;padding:10px 16px;border-radius:6px;border:1px solid #c9a84c;z-index:9999;font-size:13px;";
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+})();
+</script>
 </body>
 </html>
