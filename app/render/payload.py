@@ -125,7 +125,8 @@ def build_short_payload(
 
     words = _filter_words_in_clip(transcript, clip, emphasis_ids)
     segs = _segments_in_clip(transcript, clip)
-    refs = detect_scripture_refs(transcript, clip)
+    # P3: 본문 lookup 포함 (BibleStore)
+    refs = detect_scripture_refs(transcript, clip, lookup=True)
 
     base = (sermon_app_base or SERMON_APP_BASE).rstrip("/")
 

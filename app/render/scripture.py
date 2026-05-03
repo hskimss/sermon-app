@@ -101,19 +101,49 @@ _PAT_KOREAN = re.compile(
 )
 
 
+def lookup_verse(
+    book: str, chapter: int, verse_start: int,
+    verse_end: int | None = None,
+    *, translation: str | None = None,
+) -> tuple[str | None, str | None]:
+    """본문 lookup. (text, used_translation) 반환.
+
+    Strategy:
+      1) 명시적 translation 또는 default(krv) 시도
+      2) krv 비어있으면 kjv(영문 PD)로 폴백 — 인프라 검증/데모용
+    """
+    from .bible import get_default_store, BookNameMapper, DEFAULT_TRANSLATION
+    trans = translation or DEFAULT_TRANSLATION
+    store = get_default_store(trans)
+    text = store.lookup(book, chapter, verse_start, verse_end)
+    if text:
+        return text, trans
+    # krv가 비어있으면 KJV 영문 폴백
+    if trans != "kjv":
+        store_kjv = get_default_store("kjv")
+        en = BookNameMapper.to_english(book) or book
+        text = store_kjv.lookup(en, chapter, verse_start, verse_end)
+        if text:
+            return text, "kjv"
+    return None, None
+
+
 def detect_scripture_refs(
-    transcript: dict, clip: dict | None = None
+    transcript: dict, clip: dict | None = None,
+    *, lookup: bool = False, translation: str | None = None,
 ) -> list[dict]:
     """transcript 내에서 성구 인용을 검출.
 
     Args:
         transcript: {"segments": [{"start","end","text","words":[...]}]}
         clip: {"start_sec","end_sec"} — 주어지면 이 범위만 검출
+        lookup: True면 BibleStore에서 본문 텍스트도 채움
+        translation: "krv" / "kjv" (기본 SERMON_BIBLE_TRANS env)
 
     Returns:
         [
           {"book","chapter","verse_start","verse_end","appears_at_sec",
-           "matched_text","seg_idx"},
+           "matched_text","seg_idx"[,"text","translation"]},
           ...
         ]
     """
@@ -143,7 +173,7 @@ def detect_scripture_refs(
                 seen.add(key)
                 # appears_at_sec: 클립 시작 기준 상대 시각
                 appears_at = max(0.0, s_start - in_s)
-                refs.append({
+                ref = {
                     "book": book,
                     "chapter": chap,
                     "verse_start": vs,
@@ -151,7 +181,15 @@ def detect_scripture_refs(
                     "appears_at_sec": round(appears_at, 2),
                     "matched_text": m.group(0),
                     "seg_idx": sIdx,
-                })
+                }
+                if lookup:
+                    text, trans = lookup_verse(
+                        book, chap, vs, ve, translation=translation,
+                    )
+                    if text:
+                        ref["text"] = text
+                        ref["translation"] = trans
+                refs.append(ref)
     refs.sort(key=lambda r: r["appears_at_sec"])
     return refs
 
