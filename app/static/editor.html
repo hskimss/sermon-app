@@ -875,7 +875,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #
  * ──────────────────────────────────────────────────────────────── */
 (function () {
   "use strict";
-  if (typeof jobId === "undefined" || !jobId) return;  // 다른 페이지면 skip
+  // (P6 fix) jobId는 원본 IIFE의 로컬 변수 — 자체적으로 URL에서 추출
+  const jobId = window.location.pathname.split("/").pop();
+  if (!jobId) return;
 
   const POLL_MS = 5000;
   const TIMEOUT_MS = 5 * 60 * 1000;          // 5분 hard timeout → fallback
