@@ -13,7 +13,7 @@ from .scripture import detect_scripture_refs
 
 # Tailscale 안에서 HP가 sermon-app에 audio fetch할 때 쓸 base url
 SERMON_APP_BASE = os.getenv(
-    "SERMON_APP_BASE_URL", "http://mac-tailscale:5001"
+    "SERMON_APP_BASE_URL", "http://100.89.99.106:5001"
 )
 DEFAULT_HOUSE_STYLE = "a_church_london_v1"
 

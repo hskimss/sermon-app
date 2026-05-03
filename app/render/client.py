@@ -13,7 +13,7 @@ from typing import Any
 import requests
 
 HF_RENDER_URL = os.getenv(
-    "HF_RENDER_URL", "http://100.104.121.7:8766"
+    "HF_RENDER_URL", "http://100.104.121.7:8770"
 )
 
 
