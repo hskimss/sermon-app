@@ -93,33 +93,30 @@ body { font-family: var(--font-ui); }
   letter-spacing: 0.05em;
 }
 
-/* ─── Scene 3 · Body / lower-third captions (v1 graft + viewport fix) ── */
+/* ─── Scene 3 · Body / segment-by-segment swap ─────────────────────── */
 #scene-body {
   background: var(--color-charcoal);
 }
 #captions {
   position: absolute;
+  inset: 0;                  /* full root, .seg-line 들이 자기 위치 잡음 */
+  pointer-events: none;
+}
+.seg-line {
+  position: absolute;
   left: 64px; right: 64px;
   top: 1080px; height: 540px;
-  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
   font-family: var(--font-ui); font-weight: 800;
-  font-size: 80px; line-height: 1.22;
+  font-size: 72px; line-height: 1.32;
   word-break: keep-all;
   text-align: center;
-  display: flex; flex-wrap: wrap;
-  justify-content: center;
-  align-items: flex-end; align-content: flex-end;
-  gap: 8px 12px;
-  padding-bottom: 10px;
-}
-#captions .word {
-  display: inline-block;
   color: #FFFFFF;
   text-shadow: var(--stroke-8);
-  opacity: 0; transform: scale(0.96);
-  will-change: opacity, transform;
+  opacity: 0;
+  will-change: opacity;
 }
-#captions .word.emphasis { color: var(--color-emphasis); }
+.seg-line .em { color: var(--color-emphasis); }
 
 /* ─── Scene 4 · Austerity ──────────────────────────────────────────── */
 #scene-austerity {
@@ -170,6 +167,7 @@ body { font-family: var(--font-ui); }
      data-height="1920"
      data-fps="30"
      data-words-json='{{WORDS_JSON}}'
+     data-segments-json='{{TRANSCRIPT_SEGMENTS_JSON}}'
      data-scripture-refs-json='{{SCRIPTURE_REFS_JSON}}'
      data-audio-url="{{AUDIO_URL}}"
      data-music-bed-url="{{MUSIC_BED_URL}}">
@@ -243,6 +241,8 @@ document.addEventListener('DOMContentLoaded', () => {
     || Number(root.getAttribute('data-duration')) || 60;
   const words = Array.isArray(window.__WORDS__)
     ? window.__WORDS__ : readJsonAttr('data-words-json');
+  const segs  = Array.isArray(window.__SEGMENTS__)
+    ? window.__SEGMENTS__ : readJsonAttr('data-segments-json');
   const refs  = Array.isArray(window.__SCRIPTURE_REFS__)
     ? window.__SCRIPTURE_REFS__ : readJsonAttr('data-scripture-refs-json');
 
@@ -261,6 +261,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const haveScripture = refs.length > 0 && (refs[0].text || refs[0].book);
   const haveWords     = words.length > 0;
+  const haveSegs      = Array.isArray(segs) && segs.length > 0;
+  const useBody       = haveSegs || haveWords;  // segment-mode 우선
+
+  // emphasis word 식별 — wid 또는 word 텍스트로 매칭
+  const empWords = new Set();
+  for (const w of words) {
+    if (w.is_emphasis) empWords.add((w.word || '').trim());
+  }
 
   let t = 0;
   const T = {};
@@ -281,17 +289,31 @@ document.addEventListener('DOMContentLoaded', () => {
   t += AUSTERITY_DUR;
   T.outro = { in: t, out: TOTAL };
 
-  /* ─── Captions DOM (scene 3) */
+  /* ─── Captions DOM (scene 3) — segment-by-segment swap */
   const cap = document.getElementById('captions');
   cap.innerHTML = '';
-  const wordSpans = words.map((w, i) => {
-    const span = document.createElement('span');
-    span.className = 'word' + (w.is_emphasis ? ' emphasis' : '');
-    span.dataset.wid = w.wid || ('w' + i);
-    span.textContent = (w.word || '').trim();
-    cap.appendChild(span);
-    return span;
+  // segment 단위 .seg-line — 같은 위치 stack, opacity로 swap
+  function renderSegText(text) {
+    // emphasis word 만 inline span 으로 골드. 단순한 word-level lookup.
+    if (!empWords.size) return text;
+    return text.split(/(\s+)/).map(tok => {
+      const t = tok.trim();
+      if (t && empWords.has(t)) {
+        return `<span class="em">${tok}</span>`;
+      }
+      return tok;
+    }).join('');
+  }
+  const segLines = (haveSegs ? segs : []).map((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'seg-line';
+    div.dataset.idx = String(i);
+    div.innerHTML = renderSegText((s.text || '').trim());
+    cap.appendChild(div);
+    return div;
   });
+  // wordSpans는 placeholder (다른 코드 호환 위해 빈 배열로)
+  const wordSpans = [];
 
   /* ─── Scripture text fill (scene 2) — runtime if not server-substituted */
   if (haveScripture) {
