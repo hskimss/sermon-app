@@ -1,0 +1,93 @@
+<template id="scene-scripture-template">
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <div data-composition-id="scene-scripture" data-start="0" data-duration="8" data-width="1080" data-height="1920">
+  <style>
+    [data-composition-id="scene-scripture"] {
+      width: 1080px; height: 1920px;
+      background: #0E1116;
+      position: relative;
+      overflow: hidden;
+      font-family: 'Pretendard Variable', sans-serif;
+    }
+    [data-composition-id="scene-scripture"] .scene-content {
+      width: 100%; height: 100%;
+      padding: 280px 64px 320px 64px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+    [data-composition-id="scene-scripture"] .scripture-card {
+      background: rgba(245, 239, 224, 0.06);
+      border-left: 4px solid #B8923A;
+      padding: 60px 56px 52px;
+      max-width: 100%;
+    }
+    [data-composition-id="scene-scripture"] .scripture-ref {
+      font-family: 'Pretendard Variable', sans-serif;
+      font-weight: 700;
+      font-size: 38px;
+      color: #B8923A;
+      letter-spacing: 0.02em;
+      margin-bottom: 28px;
+    }
+    [data-composition-id="scene-scripture"] .scripture-text {
+      font-family: 'Noto Serif KR', serif;
+      font-weight: 600;
+      font-size: 56px;
+      line-height: 1.45;
+      word-break: keep-all;
+      color: #F5EFE0;
+      max-width: 100%;
+    }
+    [data-composition-id="scene-scripture"] .scripture-translation {
+      font-family: 'Pretendard Variable', sans-serif;
+      font-size: 22px;
+      color: rgba(245, 239, 224, 0.5);
+      letter-spacing: 0.05em;
+      margin-top: 24px;
+      text-align: right;
+    }
+  </style>
+
+  <div class="scene-content">
+    <div class="scripture-card">
+      <div class="scripture-ref" id="sref">{{SCRIPTURE_REF}}</div>
+      <div class="scripture-text" id="stxt">{{SCRIPTURE_TEXT}}</div>
+      <div class="scripture-translation" id="strans">{{SCRIPTURE_TRANSLATION}}</div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+window.__timelines = window.__timelines || {};
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo(".scripture-card",
+        { y: 40, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.8, ease: "power2.out" },
+        0.4);
+      tl.fromTo("#sref",
+        { y: 16, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" },
+        0.7);
+      tl.fromTo("#stxt",
+        { y: 20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.7, ease: "expo.out" },
+        0.9);
+      tl.fromTo("#strans",
+        { opacity: 0 },
+        { opacity: 1, duration: 0.4, ease: "sine.out" },
+        1.4);
+      // NO exit — transition handles
+      tl.set({}, {}, 8);
+      // Motion partial — card-glow (aisoc scene3-reveal card 1:1)
+      if (window.__motionPartials && window.__motionPartials["card-glow"]) {
+        window.__motionPartials["card-glow"]('[data-composition-id="scene-scripture"]')(tl, 0);
+      }
+      window.__timelines["scene-scripture"] = tl;
+    })();
+  
+  </script>
+</div>
+</template>

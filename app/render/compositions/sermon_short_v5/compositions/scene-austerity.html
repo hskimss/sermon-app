@@ -1,0 +1,70 @@
+<template id="scene-austerity-template">
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <div data-composition-id="scene-austerity" data-start="0" data-duration="6" data-width="1080" data-height="1920">
+  <style>
+    [data-composition-id="scene-austerity"] {
+      width: 1080px; height: 1920px;
+      background: #000000;                 /* pure black — austerity */
+      position: relative;
+      overflow: hidden;
+      font-family: 'Noto Serif KR', serif;
+    }
+    [data-composition-id="scene-austerity"] .scene-content {
+      width: 100%; height: 100%;
+      padding: 320px 100px 320px 100px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      box-sizing: border-box;
+    }
+    [data-composition-id="scene-austerity"] .austerity-phrase {
+      font-family: 'Noto Serif KR', serif;
+      font-weight: 700;
+      font-size: 72px;
+      line-height: 1.4;
+      text-align: center;
+      color: #F5EFE0;
+      word-break: keep-all;
+      letter-spacing: 0.02em;
+      max-width: 880px;
+    }
+  </style>
+
+  <div class="scene-content">
+    <div class="austerity-phrase" id="austerity-text">{{AUSTERITY_PHRASE}}</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+window.__timelines = window.__timelines || {};
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      // Single, slow entrance — reverent restraint
+      tl.fromTo("#austerity-text",
+        { opacity: 0 },
+        { opacity: 1, duration: 1.0, ease: "power2.out" },
+        0.4);
+      // Vignette-deepen — contrast 1→1.5 + vignette opacity (직접 추가, linear-promo vignette 패턴)
+      var host = document.querySelector('[data-composition-id="scene-austerity"]');
+      if (host && !host._vigEl) {
+        var vig = document.createElement("div");
+        vig.style.cssText = "position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 30%,rgba(0,0,0,0.95) 95%);opacity:0;pointer-events:none;z-index:5;";
+        host.appendChild(vig);
+        host._vigEl = vig;
+        // Vignette deepen: 0→0.7 (1:1 01-problem-type .vignette opacity pattern)
+        tl.to(vig, { opacity: 0.7, duration: 2, yoyo: true, repeat: 1, ease: "sine.inOut" }, 0.5);
+        // Contrast deepen on austerity-text (1→1.5, CSS filter)
+        tl.fromTo("#austerity-text",
+          { filter: "contrast(1)" },
+          { filter: "contrast(1.5)", duration: 2.5, ease: "sine.inOut" },
+          1.0);
+      }
+      // NO exit — hard cut to outro
+      tl.set({}, {}, 6);
+      window.__timelines["scene-austerity"] = tl;
+    })();
+  
+  </script>
+</div>
+</template>

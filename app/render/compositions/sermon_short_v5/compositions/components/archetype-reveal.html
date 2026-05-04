@@ -1,0 +1,45 @@
+<template id="archetype-reveal-template">
+<script>
+// archetype-reveal.html — 1:1 may-shorts-19 scene7-cta scan+chip+arrows+sub pattern
+(function () {
+  window.__motionPartials = window.__motionPartials || {};
+  window.__motionPartials["archetype-reveal"] = function (sel) {
+    return function (tl, offset) {
+      var o = typeof offset === "number" ? offset : 0;
+      var host = document.querySelector(sel);
+      if (!host || host._arDone) return;
+      host._arDone = true;
+
+      // Inject scan line — 1:1 scene7-cta .s7-scan
+      var scan = document.createElement("div");
+      scan.style.cssText = "position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent 0%,#B8923A 40%,#F5EFE0 60%,transparent 100%);opacity:0.9;transform:translateX(-100%);z-index:10;pointer-events:none;";
+      host.appendChild(scan);
+
+      // Scan sweep — 1:1 scene7-cta tl.fromTo(#s7-scan, {x:"-100%"}, {x:"100%", 0.55, power2.inOut})
+      tl.fromTo(scan,
+        { x: "-100%" },
+        { x: "100%", duration: 0.55, ease: "power2.inOut" },
+        o + 0.0);
+
+      // Post-entrance bounce pulse on archetype — 1:1 scene7-cta #s7-arrows y:18 yoyo
+      // Fires at t=2.0+ (after existing scene entrance completes at ~1.3s)
+      var arch = document.querySelector(sel + " #archetype");
+      if (arch) {
+        tl.to(arch,
+          { y: -8, duration: 0.35, ease: "power2.inOut",
+            repeat: Math.ceil(1.4 / 0.7) * 2 - 1, yoyo: true },
+          o + 2.0);
+      }
+
+      // Sub-label pulse — 1:1 scene7-cta #s7-sub opacity fade-in (complements existing brand entrance)
+      var brand = document.querySelector(sel + " #brand");
+      if (brand) {
+        tl.to(brand,
+          { letterSpacing: "0.08em", duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: 1 },
+          o + 2.5);
+      }
+    };
+  };
+})();
+</script>
+</template>

@@ -1,0 +1,42 @@
+<template id="card-glow-template">
+<script>
+// card-glow.html — 1:1 aisoc-app-release scene3-reveal s3-card glow-pulse + s3-trace draw pattern
+(function () {
+  window.__motionPartials = window.__motionPartials || {};
+  window.__motionPartials["card-glow"] = function (sel) {
+    return function (tl, offset) {
+      var o = typeof offset === "number" ? offset : 0;
+      var card = document.querySelector(sel + " .scripture-card");
+      if (!card || card._cgDone) return;
+      card._cgDone = true;
+
+      // Inject border-draw bar — 1:1 scene3-reveal s3-trace stroke-dashoffset pattern
+      // (SVG stroke draw adapted to CSS height-grow on left border element)
+      card.style.position = "relative";
+      var bar = document.createElement("div");
+      bar.style.cssText = "position:absolute;left:0;top:0;width:4px;height:0;background:#B8923A;box-shadow:0 0 12px rgba(184,146,58,0.7);z-index:2;pointer-events:none;";
+      card.appendChild(bar);
+
+      // Border draw — height 0 → 100%, ease:power2.out @ +0.5 (scene3-reveal s3-trace timing)
+      tl.fromTo(bar,
+        { height: 0 },
+        { height: "100%", duration: 0.6, ease: "power2.out" },
+        o + 0.5);
+
+      // Card glow pulse — 1:1 scene3-reveal .s3-card boxShadow (2 cycles, sine.inOut)
+      tl.to(card,
+        { boxShadow: "0 0 28px rgba(184,146,58,0.55)", duration: 1.4, ease: "sine.inOut", repeat: 2, yoyo: true },
+        o + 1.2);
+
+      // Card-dot pulse on ref — 1:1 scene3-reveal s3-card-dot scale (3 cycles)
+      var ref = document.querySelector(sel + " .scripture-ref");
+      if (ref) {
+        tl.to(ref,
+          { scale: 1.04, duration: 0.8, ease: "sine.inOut", repeat: 3, yoyo: true },
+          o + 1.2);
+      }
+    };
+  };
+})();
+</script>
+</template>

@@ -1,0 +1,65 @@
+<template id="kinetic-type-template">
+<script>
+// kinetic-type.html — 1:1 linear-promo 01-problem-type word-stagger + whip-streak pattern
+(function () {
+  window.__motionPartials = window.__motionPartials || {};
+  window.__motionPartials["kinetic-type"] = function (sel) {
+    return function (tl, offset) {
+      var o = typeof offset === "number" ? offset : 0;
+      var el = document.querySelector(sel + " #hook-headline");
+      if (!el || el._ktDone) return;
+      el._ktDone = true;
+
+      // Split text into word spans — 1:1 01-problem-type .w1/.w2/.w3/.w4 pattern
+      var words = el.textContent.trim().split(/\s+/);
+      el.innerHTML = words.map(function (w, i) {
+        return '<span class="kt-w" data-i="' + i + '" style="display:inline-block;opacity:0;will-change:opacity,transform">' + w + '</span>';
+      }).join('\u00a0');
+
+      // x-cascade stagger — exact ease/timing from 01-problem-type
+      // w1: x:360, 0.33, expo.out @ 0.8
+      // w2: x:120, 0.30, expo.out @ 1.2
+      // w3: x:25,  0.25, expo.out @ 1.7
+      // w4+: scale 0.85→1, 0.4, back.out(1.4) @ 1.95+
+      var spans = el.querySelectorAll(".kt-w");
+      spans.forEach(function (sp, i) {
+        if (i === 0) {
+          tl.fromTo(sp,
+            { x: 360, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.33, ease: "expo.out" },
+            o + 0.8);
+        } else if (i === 1) {
+          tl.fromTo(sp,
+            { x: 120, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.30, ease: "expo.out" },
+            o + 1.2);
+        } else if (i === 2) {
+          tl.fromTo(sp,
+            { x: 25, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.25, ease: "expo.out" },
+            o + 1.7);
+        } else {
+          tl.fromTo(sp,
+            { scale: 0.85, opacity: 0 },
+            { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(1.4)" },
+            o + 1.95 + (i - 3) * 0.3);
+        }
+      });
+
+      // Whip-streak flourish — 1:1 01-problem-type .whip-streak
+      var host = document.querySelector(sel);
+      if (host) {
+        var streak = document.createElement("div");
+        streak.style.cssText = "position:absolute;top:50%;left:0;width:60%;height:10px;background:linear-gradient(90deg,transparent 0%,rgba(245,239,224,0.95) 50%,transparent 100%);filter:blur(8px);transform:translate(-150%,-50%);opacity:0;pointer-events:none;z-index:30;";
+        host.appendChild(streak);
+        tl.set(streak, { opacity: 1 }, o + 3.6);
+        tl.fromTo(streak,
+          { xPercent: -150, scaleX: 0.5 },
+          { xPercent: 250, scaleX: 1.5, duration: 0.4, ease: "power3.in" },
+          o + 3.6);
+      }
+    };
+  };
+})();
+</script>
+</template>

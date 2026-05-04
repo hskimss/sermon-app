@@ -1,0 +1,41 @@
+<template id="word-highlight-template">
+<script>
+// word-highlight.html — 1:1 may-shorts-19 scene2-rejection chip-stagger + stamp back.out pattern
+(function () {
+  window.__motionPartials = window.__motionPartials || {};
+  window.__motionPartials["word-highlight"] = function (sel) {
+    return function (tl, offset) {
+      var o = typeof offset === "number" ? offset : 0;
+
+      // Emphasis flash — 1:1 scene2-rejection s2-chip stagger opacity entry (power2.out, 0.08 stagger)
+      // + s2-stamp back.out scale on emphasis words
+      var emph = document.querySelectorAll(sel + " .emphasis");
+      if (!emph.length) return;
+
+      // Stagger entry: 0.35 dur, power2.out, 0.08 stagger — exact scene2 .s2-chip values
+      emph.forEach(function (el, i) {
+        tl.fromTo(el,
+          { scale: 0.7, opacity: 0 },
+          { scale: 1, opacity: 1, duration: 0.35, ease: "power2.out" },
+          o + 0.1 + i * 0.08);
+      });
+
+      // Emphasis flash pulse — 1:1 scene2 s2-stamp back.out(2.2) at +1.31 timing
+      emph.forEach(function (el, i) {
+        tl.to(el,
+          { scale: 1.08, duration: 0.32, ease: "back.out(2.2)", yoyo: true, repeat: 1 },
+          o + 1.31 + i * 0.08);
+      });
+
+      // Periodic re-flash across scene — ensure emphasis visible mid/late body
+      // Pattern: scene2 chips dim at t=1.03 then stamp at 1.31
+      [8, 16, 24].forEach(function (t) {
+        tl.to(sel + " .emphasis",
+          { textShadow: "0 0 20px rgba(212,175,55,0.85)", duration: 0.22, ease: "power3.out", yoyo: true, repeat: 1 },
+          o + t);
+      });
+    };
+  };
+})();
+</script>
+</template>
