@@ -108,6 +108,42 @@ def master_audio(
     return True
 
 
+def apply_music_bed(
+    sermon_mp3: Path,
+    mood: str,
+    output: Path,
+    music_beds_dir: Path = Path("app/render/music_beds"),
+    duck_db: float = -12.0,
+    target_lufs: float = -16.0,
+) -> Path:
+    """sermon vocal에 mood 배경음악 깔기 + sidechain ducking + LUFS -16 final.
+
+    1. bed mp3를 -12dB로 attenuate
+    2. sidechaincompress: vocal 있을 때 bed -12dB 추가 ducking
+    3. amix
+    4. loudnorm I=-16:LRA=11:TP=-1.5
+    """
+    import subprocess
+    bed = music_beds_dir / f"{mood}.mp3"
+    if not bed.exists():
+        raise FileNotFoundError(f"music bed: {bed}")
+    ff = _ffmpeg_exe()
+    cmd = [
+        ff, "-y",
+        "-i", str(sermon_mp3),
+        "-i", str(bed),
+        "-filter_complex",
+        f"[1:a]volume={duck_db}dB[bed_attn];"
+        "[bed_attn][0:a]sidechaincompress=threshold=0.05:ratio=8:attack=20:release=200[bed_ducked];"
+        "[0:a][bed_ducked]amix=inputs=2:duration=first:dropout_transition=0[mixed];"
+        f"[mixed]loudnorm=I={target_lufs}:LRA=11:TP=-1.5",
+        "-c:a", "libmp3lame", "-b:a", "192k",
+        str(output),
+    ]
+    subprocess.run(cmd, check=True, capture_output=True)
+    return output
+
+
 def ensure_master(
     path: Path | str,
     *,
