@@ -158,6 +158,77 @@ def build_short_payload(
     return body
 
 
+def _chunk_body_lines(
+    transcript_segments: list[dict],
+    body_window_start: float = 14.0,
+    body_window_end: float = 48.0,
+    emphasis_ids: set[str] | None = None,
+    max_lines: int = 6,
+) -> list[dict]:
+    """transcript segments → 4-6 body lines (each ~5-9s).
+
+    Returns: [{html, start (body-local), duration}]
+    """
+    emphasis_ids = emphasis_ids or set()
+
+    body_segs = [
+        s for s in (transcript_segments or [])
+        if float(s.get("end", 0)) > body_window_start
+        and float(s.get("start", 0)) < body_window_end
+    ]
+    if not body_segs:
+        return []
+
+    rows: list[dict] = []
+    for si, seg in enumerate(body_segs):
+        s_start = max(float(seg.get("start", 0)), body_window_start)
+        s_end = min(float(seg.get("end", 0)), body_window_end)
+        local_start = round(s_start - body_window_start, 3)
+        local_dur = round(max(0.4, s_end - s_start), 3)
+
+        # word-level emphasis -> inline span
+        words_html: list[str] = []
+        for wi, w in enumerate(seg.get("words", []) or []):
+            wid_full = f"s{seg.get('seg_idx', si)}w{wi}"
+            wid_alt = w.get("wid")
+            word_text = (w.get("word") or "").strip()
+            if not word_text:
+                continue
+            is_em = (wid_full in emphasis_ids) or (wid_alt in emphasis_ids)
+            from html import escape as _esc
+            esc = _esc(word_text)
+            if is_em:
+                words_html.append(f'<span class="emphasis">{esc}</span>')
+            else:
+                words_html.append(esc)
+
+        if not words_html:
+            from html import escape as _esc
+            words_html.append(_esc((seg.get("text") or "").strip()))
+
+        rows.append({
+            "html": " ".join(words_html),
+            "start": local_start,
+            "duration": local_dur,
+        })
+
+    # Cap to max_lines — merge adjacent short segments if needed
+    while len(rows) > max_lines:
+        # find the shortest pair of adjacents and merge
+        pairs = [(rows[i]["duration"] + rows[i+1]["duration"], i)
+                 for i in range(len(rows) - 1)]
+        pairs.sort()
+        i = pairs[0][1]
+        merged = {
+            "html": rows[i]["html"] + " " + rows[i+1]["html"],
+            "start": rows[i]["start"],
+            "duration": round(rows[i]["duration"] + rows[i+1]["duration"], 3),
+        }
+        rows = rows[:i] + [merged] + rows[i+2:]
+
+    return rows
+
+
 def build_short_payload_v2(
     job_id: str,
     clip: dict,
@@ -198,6 +269,76 @@ def build_short_payload_v2(
         or "주님 앞에 잠잠하라"
     )[:24]
     body["music_bed_url"] = music_bed_url or ""
+
+    if extra:
+        body.update(extra)
+    return body
+
+
+def build_short_payload_v3(
+    job_id: str,
+    clip: dict,
+    *,
+    jobs_dir: Path | str,
+    fmt: str = "9:16",
+    quality: str = "1080p",
+    house_style: str = DEFAULT_HOUSE_STYLE,
+    sermon_app_base: str | None = None,
+    callback_url: str | None = None,
+    austerity_phrase: str | None = None,
+    music_bed_url: str = "",
+    body_window: tuple[float, float] = (14.0, 48.0),
+    extra: dict[str, Any] | None = None,
+) -> dict:
+    """sermon_short_v3 payload — SKILL.md 정석 5 sub-comp.
+
+    v2와 동일 데이터 + body_lines (segment 단위 4-6 line chunk) +
+    scripture_ref/text/translation 정적 추가.
+    """
+    body = build_short_payload_v2(
+        job_id=job_id, clip=clip, jobs_dir=jobs_dir,
+        fmt=fmt, quality=quality, house_style=house_style,
+        sermon_app_base=sermon_app_base, callback_url=callback_url,
+        austerity_phrase=austerity_phrase, music_bed_url=music_bed_url,
+    )
+    body["composition"] = "sermon_short_v3"
+
+    # emphasis_ids (v3 chunk-time emphasis 적용)
+    job_dir = Path(jobs_dir) / job_id
+    emphasis_ids: set[str] = set()
+    emp_path = job_dir / "llm_emphasis.json"
+    if emp_path.exists():
+        try:
+            emphasis_ids = set(_read_json(emp_path).get("emphasis_ids", []))
+        except Exception:
+            emphasis_ids = set()
+
+    body["body_lines"] = _chunk_body_lines(
+        body.get("transcript_segments", []),
+        body_window_start=body_window[0],
+        body_window_end=body_window[1],
+        emphasis_ids=emphasis_ids,
+        max_lines=6,
+    )
+
+    refs = body.get("scripture_refs") or []
+    if refs:
+        r0 = refs[0]
+        ve = r0.get("verse_end") or r0.get("verse_start")
+        vs = r0.get("verse_start")
+        chap = r0.get("chapter")
+        book = r0.get("book") or ""
+        if book and chap and vs:
+            verse_range = f"{vs}" if (not ve or ve == vs) else f"{vs}-{ve}"
+            body["scripture_ref"] = f"{book} {chap}:{verse_range}"
+        else:
+            body["scripture_ref"] = ""
+        body["scripture_text"] = r0.get("text", "") or ""
+        body["scripture_translation"] = r0.get("translation", "") or ""
+    else:
+        body["scripture_ref"] = ""
+        body["scripture_text"] = ""
+        body["scripture_translation"] = ""
 
     if extra:
         body.update(extra)

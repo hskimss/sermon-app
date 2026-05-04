@@ -1,0 +1,105 @@
+<template id="scene-body-template">
+<div data-composition-id="scene-body" data-width="1080" data-height="1920">
+  <style>
+    [data-composition-id="scene-body"] {
+      width: 1080px; height: 1920px;
+      background: #0E1116;
+      position: relative;
+      overflow: hidden;
+      font-family: 'Pretendard Variable', sans-serif;
+    }
+    /* SKILL.md mandatory — scene-content fills via flex + padding */
+    [data-composition-id="scene-body"] .scene-content {
+      width: 100%; height: 100%;
+      padding: 220px 80px 270px 80px;       /* TikTok safe zones */
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;             /* lower-third equivalent */
+      align-items: center;
+      gap: 24px;
+      box-sizing: border-box;
+    }
+    [data-composition-id="scene-body"] .body-line {
+      font-family: 'Pretendard Variable', sans-serif;
+      font-weight: 800;
+      font-size: 76px;
+      line-height: 1.22;
+      text-align: center;
+      color: #FFFFFF;
+      word-break: keep-all;
+      max-width: 920px;
+      text-shadow:
+        -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000,
+        -3px 0 0 #000, 3px 0 0 #000, 0 -3px 0 #000, 0 3px 0 #000;
+      opacity: 0;                             /* CSS initial — NOT gsap.set */
+      will-change: opacity, transform;
+    }
+    [data-composition-id="scene-body"] .body-line .emphasis {
+      color: #D4AF37;
+    }
+  </style>
+
+  <!-- Up to 6 line slots; line-times JSON injected as data-* attribute (lint-safe). -->
+  <div class="scene-content"
+       data-line-times-json='{{LINE_TIMES_JSON}}'>
+    <div class="body-line" id="line-0">{{LINE_0_HTML}}</div>
+    <div class="body-line" id="line-1">{{LINE_1_HTML}}</div>
+    <div class="body-line" id="line-2">{{LINE_2_HTML}}</div>
+    <div class="body-line" id="line-3">{{LINE_3_HTML}}</div>
+    <div class="body-line" id="line-4">{{LINE_4_HTML}}</div>
+    <div class="body-line" id="line-5">{{LINE_5_HTML}}</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    window.__timelines = window.__timelines || {};
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      const SCENE_DUR = 34;
+
+      // LINE_TIMES — sermon-app injects via data-line-times-json attribute
+      // Array of {start: bodyLocalSec, duration: sec}, ordered.
+      function readLineTimes() {
+        const el = document.querySelector(
+          "[data-composition-id='scene-body'] .scene-content");
+        const raw = el && el.getAttribute("data-line-times-json");
+        if (!raw) return [];
+        try { return JSON.parse(raw); } catch (_) { return []; }
+      }
+      const lineTimes = readLineTimes();
+
+      // Entrance only — segment-by-segment swap.
+      // SKILL.md Rule #10: tl.set on later clip elements MUST be inside timeline.
+      lineTimes.forEach((lt, i) => {
+        if (i > 5) return;                                 // hard cap 6 lines
+        const start = Math.max(0, Number(lt.start) || 0);
+        const dur   = Math.max(0.4, Number(lt.duration) || 4);
+        if (start >= SCENE_DUR - 0.3) return;
+
+        // Entrance — fromTo (sub-comp load-bearing per SKILL.md motion-principles)
+        tl.fromTo(`#line-${i}`,
+          { y: 30, opacity: 0 },
+          { y: 0,  opacity: 1, duration: 0.4, ease: "power3.out" },
+          start);
+
+        // Hide BEFORE next line entrance — tl.set inside timeline (SKILL.md Rule #10)
+        // Last visible line stays until scene end (transition handles exit).
+        const next = lineTimes[i + 1];
+        if (next) {
+          const swapAt = Math.min(
+            Number(next.start) - 0.05,
+            start + dur,
+            SCENE_DUR - 0.1
+          );
+          if (swapAt > start + 0.3) {
+            tl.set(`#line-${i}`, { opacity: 0 }, swapAt);
+          }
+        }
+        // (no exit on the last line — outgoing transition will handle it)
+      });
+
+      window.__timelines["scene-body"] = tl;
+    })();
+  </script>
+</div>
+</template>

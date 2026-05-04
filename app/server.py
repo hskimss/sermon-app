@@ -352,7 +352,7 @@ def api_render(job_id):
     """
     from app.jobs import JOBS_DIR
     from app.render import (
-        build_short_payload, build_short_payload_v2,
+        build_short_payload, build_short_payload_v2, build_short_payload_v3,
         HyperFramesClient, RenderError,
     )
 
@@ -361,9 +361,19 @@ def api_render(job_id):
     if "start_sec" not in clip or "end_sec" not in clip:
         return jsonify({"error": "clip.start_sec/end_sec required"}), 400
 
-    composition = body.get("composition", "sermon_short_v2")  # default v2
+    composition = body.get("composition", "sermon_short_v3")  # default v3 (SKILL.md 정석)
     try:
-        if composition == "sermon_short_v2":
+        if composition == "sermon_short_v3":
+            payload = build_short_payload_v3(
+                job_id=job_id, clip=clip, jobs_dir=JOBS_DIR,
+                fmt=body.get("format", "9:16"),
+                quality=body.get("quality", "1080p"),
+                house_style=body.get("house_style", "a_church_london_v1"),
+                callback_url=body.get("callback_url"),
+                austerity_phrase=body.get("austerity_phrase"),
+                music_bed_url=body.get("music_bed_url", ""),
+            )
+        elif composition == "sermon_short_v2":
             payload = build_short_payload_v2(
                 job_id=job_id, clip=clip, jobs_dir=JOBS_DIR,
                 fmt=body.get("format", "9:16"),

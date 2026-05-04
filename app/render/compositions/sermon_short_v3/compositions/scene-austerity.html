@@ -1,0 +1,52 @@
+<template id="scene-austerity-template">
+<div data-composition-id="scene-austerity" data-width="1080" data-height="1920">
+  <style>
+    [data-composition-id="scene-austerity"] {
+      width: 1080px; height: 1920px;
+      background: #000000;                 /* pure black — austerity */
+      position: relative;
+      overflow: hidden;
+      font-family: 'Noto Serif KR', serif;
+    }
+    [data-composition-id="scene-austerity"] .scene-content {
+      width: 100%; height: 100%;
+      padding: 320px 100px 320px 100px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      box-sizing: border-box;
+    }
+    [data-composition-id="scene-austerity"] .austerity-phrase {
+      font-family: 'Noto Serif KR', serif;
+      font-weight: 700;
+      font-size: 72px;
+      line-height: 1.4;
+      text-align: center;
+      color: #F5EFE0;
+      word-break: keep-all;
+      letter-spacing: 0.02em;
+      max-width: 880px;
+    }
+  </style>
+
+  <div class="scene-content">
+    <div class="austerity-phrase" id="austerity-text">{{AUSTERITY_PHRASE}}</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    window.__timelines = window.__timelines || {};
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      // Single, slow entrance — reverent restraint
+      tl.fromTo("#austerity-text",
+        { opacity: 0 },
+        { opacity: 1, duration: 1.0, ease: "power2.out" },
+        0.4);
+      // NO exit — hard cut to outro
+      window.__timelines["scene-austerity"] = tl;
+    })();
+  </script>
+</div>
+</template>

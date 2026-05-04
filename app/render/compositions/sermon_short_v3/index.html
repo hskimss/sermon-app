@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Sermon Short v3 — A Church London</title>
+<style>
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css');
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=EB+Garamond:wght@500&display=swap');
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background:#0E1116; color:#FFFFFF; }
+  body {
+    width: 1080px; height: 1920px;
+    overflow: hidden;
+    font-family: 'Pretendard Variable', sans-serif;
+  }
+  [data-composition-id="sermon_short_v3"] {
+    width: 1080px; height: 1920px;
+    position: relative;
+    overflow: hidden;
+    background: #0E1116;
+  }
+</style>
+</head>
+<body>
+<div data-composition-id="sermon_short_v3"
+     data-width="1080" data-height="1920"
+     data-house="a_church_london_v1">
+
+  <!-- ─── Scene 1 · Hook (0–6s) ─────────────────────────────────────── -->
+  <div id="el-hook"
+       data-composition-id="scene-hook"
+       data-composition-src="compositions/scene-hook.html"
+       data-start="0"
+       data-duration="6"
+       data-track-index="1"
+       data-prop-hook-text="{{HOOK_TEXT}}"></div>
+
+  <!-- (transition div 제거 — HF v0.4가 transition 미지원으로 sub-comp mount 방해 의심) -->
+
+  <!-- ─── Scene 2 · Scripture (6–14s) ───────────────────────────────── -->
+  <div id="el-scripture"
+       data-composition-id="scene-scripture"
+       data-composition-src="compositions/scene-scripture.html"
+       data-start="6"
+       data-duration="8"
+       data-track-index="1"
+       data-prop-ref="{{SCRIPTURE_REF}}"
+       data-prop-text="{{SCRIPTURE_TEXT}}"
+       data-prop-translation="{{SCRIPTURE_TRANSLATION}}"></div>
+
+  <!-- ─── Scene 3 · Body (14–48s) ───────────────────────────────────── -->
+  <div id="el-body"
+       data-composition-id="scene-body"
+       data-composition-src="compositions/scene-body.html"
+       data-start="14"
+       data-duration="34"
+       data-track-index="1"
+       data-prop-lines-json="{{BODY_LINES_JSON}}"></div>
+
+  <!-- ─── Scene 4 · Austerity (48–54s) ──────────────────────────────── -->
+  <div id="el-austerity"
+       data-composition-id="scene-austerity"
+       data-composition-src="compositions/scene-austerity.html"
+       data-start="48"
+       data-duration="6"
+       data-track-index="1"
+       data-prop-phrase="{{AUSTERITY_PHRASE}}"></div>
+
+  <!-- Austerity → Outro: HARD CUT (no transition — decisive return after silence) -->
+
+  <!-- ─── Scene 5 · Outro (54–60s) ──────────────────────────────────── -->
+  <div id="el-outro"
+       data-composition-id="scene-outro"
+       data-composition-src="compositions/scene-outro.html"
+       data-start="54"
+       data-duration="6"
+       data-track-index="1"
+       data-prop-archetype="{{HOOK_ARCHETYPE}}"></div>
+
+  <!-- ─── Audio tracks ──────────────────────────────────────────────── -->
+  <audio id="el-voice"
+         data-start="0" data-duration="60"
+         data-track-index="2"
+         data-volume="1.0"
+         data-audio-url="{{AUDIO_URL}}"
+         src="silent60.mp3"
+         crossorigin="anonymous"></audio>
+
+  <audio id="el-bed"
+         data-start="0" data-duration="60"
+         data-track-index="3"
+         data-volume="0.4"
+         data-music-bed-url="{{MUSIC_BED_URL}}"
+         src="silent60.mp3"
+         crossorigin="anonymous"></audio>
+
+</div>
+<!-- Sub-composition timelines auto-nest; root just registers an empty wrapper. -->
+<script>
+  window.__timelines = window.__timelines || {};
+  // Empty root timeline — sub-composition timelines drive playback.
+  // Runtime: override audio src from data-audio-url if provided
+  document.addEventListener("DOMContentLoaded", function () {
+    var v = document.getElementById("el-voice");
+    var b = document.getElementById("el-bed");
+    var vu = v && v.getAttribute("data-audio-url");
+    var bu = b && b.getAttribute("data-music-bed-url");
+    if (vu && vu.indexOf("{{") < 0 && vu.length > 0) v.src = vu;
+    if (bu && bu.indexOf("{{") < 0 && bu.length > 0) b.src = bu;
+  });
+</script>
+</body>
+</html>
