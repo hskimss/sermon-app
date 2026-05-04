@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+</head>
+<body>
+<div id="root"
+  data-composition-id="sermon_reel_v1"
+  data-start="0"
+  data-duration="180"
+  data-width="1080"
+  data-height="1920"
+>
+  <!-- Timeline: 180s total -->
+  <!-- intro: 0-10s -->
+  <div data-composition-src="compositions/intro.html"
+       data-start="0" data-duration="10" data-track-index="0"></div>
+
+  <!-- chapter-1: 10-50s -->
+  <div data-composition-src="compositions/chapter-1.html"
+       data-start="10" data-duration="40" data-track-index="0"></div>
+
+  <!-- chapter-2: 50-90s -->
+  <div data-composition-src="compositions/chapter-2.html"
+       data-start="50" data-duration="40" data-track-index="0"></div>
+
+  <!-- highlight-quote: 90-98s -->
+  <div data-composition-src="compositions/highlight-quote.html"
+       data-start="90" data-duration="8" data-track-index="0"></div>
+
+  <!-- chapter-3: 98-138s -->
+  <div data-composition-src="compositions/chapter-3.html"
+       data-start="98" data-duration="40" data-track-index="0"></div>
+
+  <!-- scripture-card: 138-160s -->
+  <div data-composition-src="compositions/scripture-card.html"
+       data-start="138" data-duration="22" data-track-index="0"></div>
+
+  <!-- outro: 160-180s -->
+  <div data-composition-src="compositions/outro.html"
+       data-start="160" data-duration="20" data-track-index="0"></div>
+
+  <!-- Audio -->
+  <audio id="el-voice"
+    data-start="0"
+    data-duration="180"
+    data-track-index="2"
+    data-volume="1.0"
+    data-audio-url="{{AUDIO_URL}}"
+    src="{{AUDIO_URL}}"
+    crossorigin="anonymous">
+  </audio>
+</div>
+
+<script>
+  window.__timelines = {};
+  const tl = gsap.timeline({ paused: true });
+  tl.set({}, {}, 180);
+  window.__timelines["sermon_reel_v1"] = tl;
+</script>
+</body>
+</html>

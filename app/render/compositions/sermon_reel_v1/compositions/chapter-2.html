@@ -1,0 +1,166 @@
+<template id="sermon-chapter-2-template">
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+KR:wght@700&display=block" rel="stylesheet" />
+
+  <div
+    data-composition-id="sermon-chapter-2"
+    data-start="0"
+    data-duration="40"
+    data-width="1080"
+    data-height="1920"
+  >
+    <div class="stage-04" style="--edge: #B8923A; --node-glow: rgba(184,146,58,0.7); --energy: #B8923A;">
+      <div class="grid-floor"></div>
+
+      <div class="benefit-stack">
+        <div class="benefit b-fast">{{CH2_POINT_1}}</div>
+        <div class="benefit b-focused">{{CH2_POINT_2}}</div>
+        <div class="benefit b-ai">{{CH2_POINT_3}}</div>
+      </div>
+
+      <svg class="flow" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg">
+        <g class="edges" stroke="var(--edge)" stroke-width="2" fill="none" stroke-linecap="round">
+          <line class="edge e1" x1="270" y1="960" x2="405" y2="680" />
+          <line class="edge e2" x1="270" y1="960" x2="405" y2="960" />
+          <line class="edge e3" x1="270" y1="960" x2="405" y2="1240" />
+          <line class="edge e4" x1="450" y1="680" x2="585" y2="540" />
+          <line class="edge e5" x1="450" y1="960" x2="585" y2="960" />
+          <line class="edge e6" x1="450" y1="1240" x2="585" y2="1400" />
+          <line class="edge e7" x1="630" y1="540" x2="765" y2="760" />
+          <line class="edge e8" x1="630" y1="960" x2="765" y2="960" />
+          <line class="edge e9" x1="630" y1="1400" x2="765" y2="1180" />
+        </g>
+
+        <g class="nodes">
+          <circle class="node n1" cx="248" cy="960" r="32" fill="#0a0a0a" stroke="var(--edge)" stroke-width="2" />
+          <circle class="node n2" cx="428" cy="680" r="32" fill="#0a0a0a" stroke="var(--edge)" stroke-width="2" />
+          <circle class="node n3" cx="428" cy="960" r="32" fill="#0a0a0a" stroke="var(--edge)" stroke-width="2" />
+          <circle class="node n4" cx="428" cy="1240" r="32" fill="#0a0a0a" stroke="var(--edge)" stroke-width="2" />
+          <circle class="node n5" cx="608" cy="540" r="32" fill="#0a0a0a" stroke="var(--edge)" stroke-width="2" />
+          <circle class="node n6" cx="608" cy="960" r="32" fill="#0a0a0a" stroke="var(--edge)" stroke-width="2" />
+          <circle class="node n7" cx="608" cy="1400" r="32" fill="#0a0a0a" stroke="var(--edge)" stroke-width="2" />
+          <circle class="node n8" cx="788" cy="760" r="32" fill="#0a0a0a" stroke="var(--edge)" stroke-width="2" />
+          <circle class="node n9" cx="788" cy="960" r="32" fill="#0a0a0a" stroke="var(--edge)" stroke-width="2" />
+          <circle class="node n10" cx="788" cy="1180" r="32" fill="#0a0a0a" stroke="var(--edge)" stroke-width="2" />
+        </g>
+      </svg>
+
+      <div class="comet"></div>
+      <div class="vignette"></div>
+      <div class="grain"></div>
+    </div>
+
+    <style>
+      [data-composition-id="sermon-chapter-2"] {
+        position: absolute; inset: 0; overflow: hidden; background: #000;
+      }
+      [data-composition-id="sermon-chapter-2"] .stage-04 { position: absolute; inset: 0; }
+      [data-composition-id="sermon-chapter-2"] .grid-floor {
+        position: absolute; inset: 0;
+        transform: perspective(900px) rotateX(60deg) translateY(25%);
+        background:
+          repeating-linear-gradient(0deg,  rgba(255,255,255,0.04) 0 1px, transparent 1px 80px),
+          repeating-linear-gradient(90deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 80px);
+        background-color: #000;
+      }
+      [data-composition-id="sermon-chapter-2"] .benefit-stack {
+        position: absolute;
+        top: 80px; right: 60px;
+        text-align: right;
+        font-family: "Noto Sans KR", sans-serif;
+        font-weight: 700;
+      }
+      [data-composition-id="sermon-chapter-2"] .benefit {
+        font-size: 72px;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+        background: linear-gradient(180deg, #ffffff 0%, #bbbbbb 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        color: transparent;
+        text-shadow: 0 0 40px var(--node-glow);
+        opacity: 0;
+        transform: translateX(60px);
+        will-change: opacity, transform;
+        word-break: keep-all;
+      }
+      [data-composition-id="sermon-chapter-2"] .flow {
+        position: absolute; inset: 0;
+        width: 100%; height: 100%;
+        opacity: 0;
+      }
+      [data-composition-id="sermon-chapter-2"] .edge {
+        stroke-dasharray: 240;
+        stroke-dashoffset: 240;
+        filter: drop-shadow(0 0 6px var(--energy));
+      }
+      [data-composition-id="sermon-chapter-2"] .node {
+        filter: drop-shadow(0 0 12px var(--node-glow));
+      }
+      [data-composition-id="sermon-chapter-2"] .comet {
+        position: absolute;
+        top: 42%; left: 0;
+        width: 70%; height: 14px;
+        background: linear-gradient(90deg, transparent 0%, rgba(184,146,58,0.95) 40%, #ffffff 55%, transparent 100%);
+        filter: blur(10px);
+        transform: translate(-150%, 0);
+        opacity: 0;
+      }
+      [data-composition-id="sermon-chapter-2"] .vignette {
+        position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.95) 95%);
+        opacity: 0.7;
+      }
+      [data-composition-id="sermon-chapter-2"] .grain {
+        position: absolute; inset: 0; pointer-events: none;
+        opacity: 0.08;
+        background-image:
+          radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+          radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
+        background-size: 3px 3px, 5px 5px;
+      }
+    </style>
+
+    <script>
+      (() => {
+        const SLOT = 40;
+        const tl = gsap.timeline({ paused: true });
+        const sel = (q) => `[data-composition-id="sermon-chapter-2"] ${q}`;
+
+        tl.set(sel('.comet'), { opacity: 1 }, 0);
+        tl.fromTo(sel('.comet'),
+          { xPercent: -150 }, { xPercent: 250, duration: 0.4, ease: 'power3.in' }, 0);
+        tl.to(sel('.comet'), { opacity: 0, duration: 0.2 }, 0.4);
+
+        tl.to(sel('.b-fast'),
+          { opacity: 1, x: 0, duration: 0.35, ease: 'expo.out' }, 0.25);
+
+        tl.to(sel('.flow'), { opacity: 1, duration: 0.4, ease: 'power2.out' }, 1.2);
+
+        tl.to(sel('.edges .edge'),
+          { strokeDashoffset: 0, duration: 0.6, stagger: 0.05, ease: 'power2.out' }, 1.2);
+
+        tl.to(sel('.b-focused'),
+          { opacity: 1, x: 0, duration: 0.35, ease: 'expo.out' }, 2.3);
+        tl.to(sel('.stage-04'),
+          { '--edge': '#4A6FA5', '--node-glow': 'rgba(74,111,165,0.7)', '--energy': '#4A6FA5',
+            duration: 0.5, ease: 'power2.inOut' }, 2.3);
+
+        tl.to(sel('.b-ai'),
+          { opacity: 1, x: 0, duration: 0.4, ease: 'expo.out' }, 3.3);
+        tl.to(sel('.stage-04'),
+          { '--edge': '#E8C876', '--node-glow': 'rgba(232,200,118,0.7)', '--energy': '#E8C876',
+            duration: 0.6, ease: 'power2.inOut' }, 3.3);
+
+        tl.to(sel('.b-ai'),
+          { textShadow: '0 0 80px rgba(232,200,118,0.8), 0 0 40px rgba(184,146,58,0.6)',
+            duration: 0.4, ease: 'power2.out' }, 3.5);
+
+        tl.to({}, { duration: SLOT }, 0);
+        window.__timelines = window.__timelines || {};
+        window.__timelines['sermon-chapter-2'] = tl;
+      })();
+    </script>
+  </div>
+</template>

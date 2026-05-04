@@ -372,3 +372,130 @@ def build_short_payload_v3(
     if extra:
         body.update(extra)
     return body
+
+
+def build_reel_payload_v1(
+    job_id: str,
+    clip: dict,
+    *,
+    jobs_dir: Path | str,
+    fmt: str = "9:16",
+    quality: str = "1080p",
+    house_style: str = DEFAULT_HOUSE_STYLE,
+    sermon_app_base: str | None = None,
+    callback_url: str | None = None,
+    chapter_count: int = 3,
+    church_name: str = "교회",
+    sermon_cta: str = "예배에 오세요",
+    music_bed_url: str = "",
+    extra: dict[str, Any] | None = None,
+) -> dict:
+    """sermon_reel_v1 — 2-3분 멀티씬 reel payload.
+
+    chapter 자동 분할 (Gemma 4 via reel_chapter.get_chapters).
+    실패 시 균등 분할 fallback.
+    """
+    from .reel_chapter import get_chapters
+
+    jobs_dir = Path(jobs_dir)
+    job_dir = jobs_dir / job_id
+    transcript_path = job_dir / "transcript.json"
+
+    in_s = float(clip.get("start_sec", 0))
+    out_s = float(clip.get("end_sec", 180))
+    duration = max(1.0, out_s - in_s)
+
+    base = (sermon_app_base or SERMON_APP_BASE).rstrip("/")
+    audio_url = f"{base}/api/job/{job_id}/audio"
+
+    # --- transcript + chapters ---
+    transcript: dict = {}
+    if transcript_path.exists():
+        transcript = _read_json(transcript_path)
+
+    chapters = get_chapters(transcript, target_count=chapter_count)
+
+    # --- scripture from first detected ref ---
+    refs = detect_scripture_refs(transcript, clip, lookup=True) if transcript else []
+    scripture_ref = ""
+    scripture_text = ""
+    if refs:
+        r0 = refs[0]
+        ve = r0.get("verse_end") or r0.get("verse_start")
+        vs = r0.get("verse_start")
+        chap_num = r0.get("chapter")
+        book = r0.get("book") or ""
+        if book and chap_num and vs:
+            vr = f"{vs}" if (not ve or ve == vs) else f"{vs}-{ve}"
+            scripture_ref = f"{book} {chap_num}:{vr}"
+        scripture_text = r0.get("text", "") or ""
+
+    # --- hook text from first 8 words ---
+    words_in_clip: list[dict] = []
+    if transcript:
+        emphasis_path = job_dir / "llm_emphasis.json"
+        emphasis_ids: set[str] = set()
+        if emphasis_path.exists():
+            try:
+                emphasis_ids = set(_read_json(emphasis_path).get("emphasis_ids", []))
+            except Exception:
+                emphasis_ids = set()
+        words_in_clip = _filter_words_in_clip(transcript, clip, emphasis_ids)
+
+    hook_words = [w["word"] for w in words_in_clip[:8] if w.get("word")]
+    hook_text = " ".join(hook_words).strip() or "말씀이 시작됩니다"
+
+    # --- chapter → template vars ---
+    def _ch(i: int, key: str, fallback: str) -> str:
+        if i < len(chapters):
+            return str(chapters[i].get(key, fallback))
+        return fallback
+
+    template_vars: dict[str, str] = {
+        "INTRO_LINE1": hook_text[:10],
+        "INTRO_LINE2": _ch(0, "title", "오늘의"),
+        "INTRO_HERO": _ch(0, "key_quote", "말씀")[:10],
+        "CHAPTER_1_LABEL": _ch(0, "title", "Chapter 1"),
+        "CH2_POINT_1": _ch(0, "title", "믿음"),
+        "CH2_POINT_2": _ch(1, "title", "소망"),
+        "CH2_POINT_3": _ch(2, "title", "사랑"),
+        "CH3_SCENE_1": _ch(0, "summary_short", "은혜")[:12],
+        "CH3_SCENE_2": _ch(1, "summary_short", "구원")[:12],
+        "CH3_SCENE_3": _ch(2, "summary_short", "회복")[:12],
+        "CH3_CAPTION": _ch(1, "key_quote", "하나님의 은혜")[:20],
+        "KEY_QUOTE": _ch(1, "key_quote", "두려워하지 말라")[:20],
+        "SCRIPTURE_REF": scripture_ref or "요한복음 3:16",
+        "SCRIPTURE_TEXT": scripture_text[:40] or "하나님이 세상을 이처럼 사랑하사",
+        "SCRIPTURE_SUMMARY": _ch(2, "summary_short", "말씀의 핵심")[:20],
+        "CHURCH_NAME": church_name,
+        "SERMON_TAGLINE": _ch(2, "key_quote", "말씀 안에서 새롭게")[:24],
+        "SERMON_CTA": sermon_cta,
+    }
+
+    body: dict[str, Any] = {
+        "composition": "sermon_reel_v1",
+        "format": fmt,
+        "quality": quality,
+        "house_style": house_style,
+        "audio_url": audio_url,
+        "audio_clip": {
+            "start_sec": round(in_s, 3),
+            "duration": round(duration, 3),
+        },
+        "clip_range": {"in_sec": round(in_s, 3), "out_sec": round(out_s, 3)},
+        "chapters": chapters,
+        "template_vars": template_vars,
+        "scripture_refs": refs,
+        "music_bed_url": music_bed_url,
+        "meta": {
+            "job_id": job_id,
+            "language": transcript.get("language") if transcript else None,
+            "source_duration": transcript.get("duration") if transcript else None,
+            "chapter_count": len(chapters),
+        },
+    }
+    if callback_url:
+        body["callback_url"] = callback_url
+    if extra:
+        body.update(extra)
+    return body

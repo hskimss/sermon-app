@@ -1,0 +1,185 @@
+<template id="sermon-scripture-card-template">
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700&family=JetBrains+Mono:wght@400;500&display=block" rel="stylesheet" />
+
+  <div
+    data-composition-id="sermon-scripture-card"
+    data-start="0"
+    data-duration="22"
+    data-width="1080"
+    data-height="1920"
+  >
+    <div class="stage-06">
+      <div class="grid-floor"></div>
+
+      <div class="wheel-wrap">
+        <div class="wheel">
+          <div class="wheel-inner"></div>
+          <div class="wheel-tick t0"></div>
+          <div class="wheel-tick t1"></div>
+          <div class="wheel-tick t2"></div>
+          <div class="wheel-tick t3"></div>
+          <div class="wheel-tick t4"></div>
+          <div class="wheel-tick t5"></div>
+          <div class="wheel-tick t6"></div>
+          <div class="wheel-tick t7"></div>
+        </div>
+      </div>
+
+      <div class="panel p-left">
+        <div class="pname">{{SCRIPTURE_REF}}</div>
+        <div class="pdesc">{{SCRIPTURE_TEXT}}</div>
+      </div>
+      <div class="panel p-right">
+        <div class="pname">말씀</div>
+        <div class="pdesc">{{SCRIPTURE_SUMMARY}}</div>
+      </div>
+      <div class="panel p-third">
+        <div class="pname">묵상</div>
+        <div class="pdesc">이 말씀을 마음에 새기라</div>
+      </div>
+
+      <div class="vignette"></div>
+      <div class="grain"></div>
+    </div>
+
+    <style>
+      [data-composition-id="sermon-scripture-card"] {
+        position: absolute; inset: 0; overflow: hidden; background: #000;
+      }
+      [data-composition-id="sermon-scripture-card"] .stage-06 { position: absolute; inset: 0; }
+      [data-composition-id="sermon-scripture-card"] .grid-floor {
+        position: absolute; inset: 0;
+        transform: perspective(900px) rotateX(60deg) translateY(25%);
+        background:
+          repeating-linear-gradient(0deg,  rgba(255,255,255,0.04) 0 1px, transparent 1px 80px),
+          repeating-linear-gradient(90deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 80px);
+        background-color: #000;
+      }
+      [data-composition-id="sermon-scripture-card"] .wheel-wrap {
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: 400px; height: 400px;
+        filter: drop-shadow(0 0 80px rgba(184,146,58,0.4));
+      }
+      [data-composition-id="sermon-scripture-card"] .wheel {
+        position: relative;
+        width: 100%; height: 100%;
+        border-radius: 50%;
+        background:
+          conic-gradient(from 0deg,
+            #B8923A 0deg,
+            #4A6FA5 72deg,
+            #E8C876 144deg,
+            #C4813B 216deg,
+            #D4A853 288deg,
+            #B8923A 360deg);
+        opacity: 0;
+      }
+      [data-composition-id="sermon-scripture-card"] .wheel-inner {
+        position: absolute;
+        top: 10%; left: 10%;
+        width: 80%; height: 80%;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at 35% 30%, rgba(255,255,255,0.15) 0%, transparent 40%),
+          linear-gradient(145deg, #0d0d18 0%, #1a1a28 50%, #0a0a14 100%);
+        border: 2px solid rgba(184,146,58,0.3);
+        box-shadow: inset 0 0 60px rgba(184,146,58,0.3);
+      }
+      [data-composition-id="sermon-scripture-card"] .wheel-tick {
+        position: absolute;
+        top: 50%; left: 50%;
+        width: 4px; height: 24px;
+        background: rgba(255,255,255,0.4);
+        transform-origin: 50% 200px;
+      }
+      [data-composition-id="sermon-scripture-card"] .t0 { transform: translate(-50%, -50%) rotate(0deg)   translateY(-200px); }
+      [data-composition-id="sermon-scripture-card"] .t1 { transform: translate(-50%, -50%) rotate(45deg)  translateY(-200px); }
+      [data-composition-id="sermon-scripture-card"] .t2 { transform: translate(-50%, -50%) rotate(90deg)  translateY(-200px); }
+      [data-composition-id="sermon-scripture-card"] .t3 { transform: translate(-50%, -50%) rotate(135deg) translateY(-200px); }
+      [data-composition-id="sermon-scripture-card"] .t4 { transform: translate(-50%, -50%) rotate(180deg) translateY(-200px); }
+      [data-composition-id="sermon-scripture-card"] .t5 { transform: translate(-50%, -50%) rotate(225deg) translateY(-200px); }
+      [data-composition-id="sermon-scripture-card"] .t6 { transform: translate(-50%, -50%) rotate(270deg) translateY(-200px); }
+      [data-composition-id="sermon-scripture-card"] .t7 { transform: translate(-50%, -50%) rotate(315deg) translateY(-200px); }
+
+      [data-composition-id="sermon-scripture-card"] .panel {
+        position: absolute;
+        width: 380px;
+        padding: 24px 28px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+        border: 1px solid rgba(184,146,58,0.25);
+        border-radius: 16px;
+        backdrop-filter: blur(14px);
+        opacity: 0;
+      }
+      [data-composition-id="sermon-scripture-card"] .p-left { top: 30%; left: 40px; transform: translateY(-50%); }
+      [data-composition-id="sermon-scripture-card"] .p-right { top: 30%; right: 40px; transform: translateY(-50%); }
+      [data-composition-id="sermon-scripture-card"] .p-third { bottom: 200px; left: 50%; transform: translateX(-50%); }
+      [data-composition-id="sermon-scripture-card"] .pname {
+        font-family: "Noto Sans KR", sans-serif;
+        font-weight: 700;
+        font-size: 40px;
+        letter-spacing: -0.02em;
+        color: #E8C876;
+        text-shadow: 0 0 30px rgba(184,146,58,0.5);
+        word-break: keep-all;
+      }
+      [data-composition-id="sermon-scripture-card"] .pdesc {
+        margin-top: 8px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 16px;
+        color: rgba(255,255,255,0.7);
+        letter-spacing: 0.01em;
+        line-height: 1.5;
+        word-break: keep-all;
+      }
+      [data-composition-id="sermon-scripture-card"] .vignette {
+        position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.95) 95%);
+        opacity: 0.7;
+      }
+      [data-composition-id="sermon-scripture-card"] .grain {
+        position: absolute; inset: 0; pointer-events: none;
+        opacity: 0.08;
+        background-image:
+          radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+          radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
+        background-size: 3px 3px, 5px 5px;
+      }
+    </style>
+
+    <script>
+      (() => {
+        const SLOT = 22;
+        const tl = gsap.timeline({ paused: true });
+        const sel = (q) => `[data-composition-id="sermon-scripture-card"] ${q}`;
+
+        tl.to(sel('.wheel'), { opacity: 1, duration: 0.35, ease: 'power2.out' }, 0);
+        tl.fromTo(sel('.wheel'),
+          { rotate: -30 },
+          { rotate: 360, duration: SLOT, ease: 'none' }, 0);
+
+        tl.fromTo(sel('.p-left'),
+          { x: -100, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, 0.4);
+
+        tl.fromTo(sel('.p-right'),
+          { x: 100, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, 1.0);
+
+        tl.fromTo(sel('.p-third'),
+          { y: 100, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, 1.6);
+
+        tl.to(sel('.panel'), { opacity: 0, scale: 0.9, duration: 0.25, ease: 'power2.in' }, 2.25);
+        tl.to(sel('.wheel'), { opacity: 0, scale: 0.7, duration: 0.25, ease: 'power2.in' }, 2.25);
+
+        tl.to({}, { duration: SLOT }, 0);
+        window.__timelines = window.__timelines || {};
+        window.__timelines['sermon-scripture-card'] = tl;
+      })();
+    </script>
+  </div>
+</template>

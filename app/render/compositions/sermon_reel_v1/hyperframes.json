@@ -1,0 +1,52 @@
+{
+  "composition_id": "sermon_reel_v1",
+  "version": "1.0.0",
+  "format": "9:16",
+  "width": 1080,
+  "height": 1920,
+  "duration": 180,
+  "fps": 30,
+  "vendor": "linear-promo-30s",
+  "vendor_policy": "1:1 GSAP timeline preserved — CSS palette/font swap only",
+  "dependencies": {
+    "gsap": "3.14.2",
+    "fonts": [
+      "Noto Sans KR",
+      "Noto Serif KR",
+      "JetBrains Mono"
+    ]
+  },
+  "sub_compositions": [
+    { "id": "sermon-intro",           "src": "compositions/intro.html",           "start": 0,   "duration": 10, "vendor_src": "01-problem-type.html" },
+    { "id": "sermon-chapter-1",       "src": "compositions/chapter-1.html",       "start": 10,  "duration": 40, "vendor_src": "02-card-to-logo.html" },
+    { "id": "sermon-chapter-2",       "src": "compositions/chapter-2.html",       "start": 50,  "duration": 40, "vendor_src": "04-benefits-flowchart.html" },
+    { "id": "sermon-highlight-quote", "src": "compositions/highlight-quote.html", "start": 90,  "duration": 8,  "vendor_src": "03-brand-reveal.html" },
+    { "id": "sermon-chapter-3",       "src": "compositions/chapter-3.html",       "start": 98,  "duration": 40, "vendor_src": "05-product-surfaces.html" },
+    { "id": "sermon-scripture-card",  "src": "compositions/scripture-card.html",  "start": 138, "duration": 22, "vendor_src": "06-wheel-pillars.html" },
+    { "id": "sermon-outro",           "src": "compositions/outro.html",           "start": 160, "duration": 20, "vendor_src": "08-cta-outro.html" }
+  ],
+  "template_vars": {
+    "INTRO_LINE1": "설교 제목 1",
+    "INTRO_LINE2": "제목 2",
+    "INTRO_HERO": "말씀",
+    "CHAPTER_1_LABEL": "Chapter 1 — 도입",
+    "CH2_POINT_1": "믿음",
+    "CH2_POINT_2": "소망",
+    "CH2_POINT_3": "사랑",
+    "CH3_SCENE_1": "은혜",
+    "CH3_SCENE_2": "구원",
+    "CH3_SCENE_3": "회복",
+    "CH3_CAPTION": "하나님의 은혜로 회복되다",
+    "KEY_QUOTE": "두려워하지 말라",
+    "SCRIPTURE_REF": "요한복음 3:16",
+    "SCRIPTURE_TEXT": "하나님이 세상을 이처럼 사랑하사",
+    "SCRIPTURE_SUMMARY": "하나님의 사랑과 구원",
+    "CHURCH_NAME": "교회 이름",
+    "SERMON_TAGLINE": "말씀 안에서 새롭게 되는 삶",
+    "SERMON_CTA": "예배에 오세요"
+  },
+  "audio": {
+    "placeholder": "silent_180.mp3",
+    "field": "audio_url"
+  }
+}
