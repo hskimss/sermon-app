@@ -1,0 +1,153 @@
+<template id="scene-austerity-template">
+  <div
+    data-composition-id="scene-austerity"
+    data-start="0"
+    data-width="1080"
+    data-height="1920"
+    data-duration="6"
+  >
+    <!-- Full-screen panel for hero moment -->
+    <div class="s4-panel">
+      <div class="s4-scan" id="s4-scan"></div>
+      <div class="s4-preamble" id="s4-strip"><span id="s4-strip-text"></span><span class="s4-strip-caret" id="s4-strip-caret">▊</span></div>
+      <div class="s4-six" id="s4-six">{{HOOK_ARCHETYPE}}</div>
+      <div class="s4-pill" id="s4-pill">{{AUSTERITY_PHRASE}}</div>
+    </div>
+
+    <style>
+      [data-composition-id="scene-austerity"] {
+        position: absolute;
+        inset: 0;
+      }
+      [data-composition-id="scene-austerity"] .s4-panel {
+        position: absolute;
+        inset: 0;
+        background: #0E1116;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 40px;
+        overflow: hidden;
+        font-family: "Noto Serif KR", serif;
+      }
+      [data-composition-id="scene-austerity"] .s4-preamble {
+        font-family: "Pretendard Variable", sans-serif;
+        font-weight: 500;
+        font-size: 56px;
+        letter-spacing: 0.18em;
+        color: rgba(245,239,224,0.5);
+        opacity: 1;
+        display: inline-flex;
+        align-items: baseline;
+      }
+      [data-composition-id="scene-austerity"] .s4-strip-caret {
+        color: #C8A35F;
+        margin-left: 4px;
+        font-weight: 700;
+      }
+      [data-composition-id="scene-austerity"] .s4-scan {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          #C8A35F 35%,
+          #C8A35F 65%,
+          transparent 100%
+        );
+        opacity: 0.9;
+        transform: translateX(-100%);
+      }
+      [data-composition-id="scene-austerity"] .s4-six {
+        font-family: "Noto Serif KR", serif;
+        font-weight: 900;
+        font-size: 820px;
+        line-height: 0.82;
+        color: #C8A35F;
+        text-shadow:
+          0 0 60px rgba(200, 163, 95, 0.55),
+          0 8px 0 #0E1116,
+          0 16px 60px rgba(0, 0, 0, 0.7);
+        opacity: 0;
+        transform: scale(0.35) rotate(-8deg);
+      }
+      [data-composition-id="scene-austerity"] .s4-pill {
+        padding: 22px 44px;
+        border: 2px solid #C8A35F;
+        border-radius: 999px;
+        background: rgba(14, 17, 22, 0.92);
+        text-align: center;
+        font-family: "Pretendard Variable", sans-serif;
+        font-weight: 700;
+        font-size: 44px;
+        letter-spacing: 0.1em;
+        color: #F5EFE0;
+        opacity: 0;
+        transform: translateY(30px);
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      (function () {
+        const tl = gsap.timeline({ paused: true });
+        const scope = '[data-composition-id="scene-austerity"] ';
+        const stripText = document.querySelector(scope + "#s4-strip-text");
+        const stripFull = "BUT ACTUALLY\u2026";
+
+        // Scene starts at 7.30s on master. "But" audio @ 7.38 -> local 0.08s.
+        // Type-on the preamble from local 0 so the frame has motion from the start.
+        for (let i = 1; i <= stripFull.length; i++) {
+          tl.call(
+            function (n) {
+              if (stripText) stripText.textContent = stripFull.slice(0, n);
+            },
+            [i],
+            0.02 + i * 0.028,
+          );
+        }
+        // Scan line sweeps across the top behind everything.
+        tl.fromTo(
+          scope + "#s4-scan",
+          { x: "-100%" },
+          { x: "100%", duration: 0.65, ease: "power2.inOut" },
+          0.0,
+        );
+        // Caret blinks during preamble hold, hides once "6" arrives.
+        tl.to(
+          scope + "#s4-strip-caret",
+          { opacity: 0, duration: 0.22, ease: "steps(1)", repeat: 2, yoyo: true },
+          0.1,
+        );
+        tl.to(scope + "#s4-strip-caret", { opacity: 0, duration: 0.05 }, 0.44);
+
+        // "six" @ 7.76 -> local 0.46s.
+        tl.to(
+          scope + "#s4-six",
+          { opacity: 1, scale: 1, rotation: 0, duration: 0.38, ease: "back.out(2.0)" },
+          0.46,
+        );
+        // tremor
+        tl.to(
+          scope + "#s4-six",
+          { x: 10, duration: 0.05, yoyo: true, repeat: 3, ease: "power1.inOut" },
+          0.86,
+        );
+        // Pill lands with "businesses" @ 8.22 -> local 0.92s
+        tl.to(
+          scope + "#s4-pill",
+          { opacity: 1, y: 0, duration: 0.34, ease: "back.out(1.9)" },
+          0.92,
+        );
+        tl.set({}, {}, 6);
+
+        window.__timelines = window.__timelines || {};
+        window.__timelines["scene-austerity"] = tl;
+      })();
+    </script>
+  </div>
+</template>

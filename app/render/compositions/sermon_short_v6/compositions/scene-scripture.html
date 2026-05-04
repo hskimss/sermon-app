@@ -1,0 +1,157 @@
+<template id="scene-scripture-template">
+  <div
+    data-composition-id="scene-scripture"
+    data-start="0"
+    data-width="1080"
+    data-height="1920"
+    data-duration="8"
+  >
+    <!-- Code chip, top-left — type-on scripture reference -->
+    <div class="s6-chip" id="s6-chip">
+      <span class="s6-chip-dot"></span>
+      <span class="s6-chip-text" id="s6-chip-text"></span>
+      <span class="s6-chip-caret" id="s6-chip-caret">▋</span>
+    </div>
+
+    <!-- Scripture text stamp -->
+    <div class="s6-stamp" id="s6-stamp">{{SCRIPTURE_TEXT}}</div>
+
+    <!-- Translation -->
+    <div class="s6-matter" id="s6-matter">{{SCRIPTURE_TRANSLATION}}</div>
+
+    <style>
+      [data-composition-id="scene-scripture"] {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        background: #0E1116;
+      }
+      [data-composition-id="scene-scripture"] .s6-chip {
+        position: absolute;
+        top: 100px;
+        left: 80px;
+        padding: 18px 26px;
+        background: #0E1116;
+        border: 2px solid #C8A35F;
+        border-radius: 14px;
+        font-family: "Pretendard Variable", sans-serif;
+        font-weight: 500;
+        font-size: 34px;
+        color: #C8A35F;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        opacity: 0;
+      }
+      [data-composition-id="scene-scripture"] .s6-chip-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #C8A35F;
+        box-shadow: 0 0 12px #C8A35F;
+      }
+      [data-composition-id="scene-scripture"] .s6-chip-caret {
+        color: #C8A35F;
+      }
+      [data-composition-id="scene-scripture"] .s6-stamp {
+        position: absolute;
+        top: 260px;
+        left: 50%;
+        transform: translateX(-50%) scale(1.2) rotate(-5deg);
+        padding: 22px 44px;
+        border: 4px solid #C8A35F;
+        border-radius: 16px;
+        background: rgba(14, 17, 22, 0.88);
+        font-family: "Pretendard Variable", sans-serif;
+        font-weight: 900;
+        font-size: 92px;
+        letter-spacing: -0.015em;
+        color: #C8A35F;
+        text-shadow: 0 3px 0 #0E1116;
+        opacity: 0;
+        white-space: nowrap;
+      }
+      [data-composition-id="scene-scripture"] .s6-matter {
+        position: absolute;
+        top: 440px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-family: "Pretendard Variable", sans-serif;
+        font-weight: 900;
+        font-size: 96px;
+        color: #F5EFE0;
+        letter-spacing: -0.015em;
+        text-shadow:
+          0 4px 0 #0E1116,
+          0 8px 24px rgba(14, 17, 22, 0.9);
+        opacity: 0;
+        transform: translateY(20px);
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      (function () {
+        const tl = gsap.timeline({ paused: true });
+        const scope = '[data-composition-id="scene-scripture"] ';
+        const chipEl = document.querySelector(scope + "#s6-chip-text");
+        const fullText = "{{SCRIPTURE_REF}}";
+
+        tl.to(
+          scope + "#s6-chip",
+          { opacity: 1, duration: 0.2, ease: "power2.out" },
+          0.05,
+        );
+        // Type on effect ~0.04s per char
+        for (let i = 1; i <= fullText.length; i++) {
+          tl.call(
+            function (n) {
+              if (chipEl) chipEl.textContent = fullText.slice(0, n);
+            },
+            [i],
+            0.1 + i * 0.04,
+          );
+        }
+        // Blinking caret (finite repeat)
+        const caretCycle = 0.5;
+        const caretDuration = 2.3;
+        tl.to(
+          scope + "#s6-chip-caret",
+          {
+            opacity: 0,
+            duration: caretCycle / 2,
+            ease: "steps(1)",
+            repeat: Math.ceil(caretDuration / caretCycle) * 2 - 1,
+            yoyo: true,
+          },
+          0.5,
+        );
+
+        // stamp reveal at local 2.04
+        tl.to(
+          scope + "#s6-stamp",
+          {
+            opacity: 1,
+            scale: 1,
+            rotation: -5,
+            duration: 0.26,
+            ease: "back.out(2.5)",
+          },
+          2.04,
+        );
+        // matter at local 2.62
+        tl.to(
+          scope + "#s6-matter",
+          { opacity: 1, y: 0, duration: 0.22, ease: "expo.out" },
+          2.62,
+        );
+
+        tl.set({}, {}, 8);
+
+        window.__timelines = window.__timelines || {};
+        window.__timelines["scene-scripture"] = tl;
+      })();
+    </script>
+  </div>
+</template>
