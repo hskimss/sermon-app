@@ -29,10 +29,13 @@
 }
 
 * { margin:0; padding:0; box-sizing:border-box; }
-html, body { background: var(--color-charcoal); color: #fff; }
-body {
-  width: 1080px; height: 1920px; overflow: hidden;
-  font-family: var(--font-ui);
+html, body { background: var(--color-charcoal); color: #fff; margin:0; padding:0; }
+body { font-family: var(--font-ui); }
+#root {
+  position: relative;
+  width: 1080px; height: 1920px;
+  overflow: hidden;
+  background: var(--color-charcoal);
 }
 
 /* ─── Safe zones (TikTok / Reels / Shorts UI areas) ─────────────── */
@@ -90,27 +93,24 @@ body {
   letter-spacing: 0.05em;
 }
 
-/* ─── Scene 3 · Body / lower-third captions ────────────────────────── */
+/* ─── Scene 3 · Body / lower-third captions (v1 graft + viewport fix) ── */
 #scene-body {
   background: var(--color-charcoal);
 }
-/* Lower-third 안전 영역: bottom-anchored 박스 + overflow hidden 으로
-   chunk 가 화면 밖으로 누적되지 않게 강제. */
 #captions {
   position: absolute;
   left: 64px; right: 64px;
-  bottom: 380px;            /* TikTok action 영역 270 + breathing 110 */
-  height: 540px;
+  top: 1080px; height: 540px;
   overflow: hidden;
   font-family: var(--font-ui); font-weight: 800;
-  font-size: 84px; line-height: 1.22;
+  font-size: 80px; line-height: 1.22;
   word-break: keep-all;
   text-align: center;
   display: flex; flex-wrap: wrap;
   justify-content: center;
   align-items: flex-end; align-content: flex-end;
-  gap: 8px 14px;
-  padding: 12px 0 20px;
+  gap: 8px 12px;
+  padding-bottom: 10px;
 }
 #captions .word {
   display: inline-block;
@@ -161,7 +161,7 @@ body {
 }
 </style>
 </head>
-<body>
+<body data-house="a_church_london_v1">
 <div id="root"
      data-composition-id="{{COMPOSITION_ID}}"
      data-start="0"
@@ -169,7 +169,6 @@ body {
      data-width="1080"
      data-height="1920"
      data-fps="30"
-     data-house="a_church_london_v1"
      data-words-json='{{WORDS_JSON}}'
      data-scripture-refs-json='{{SCRIPTURE_REFS_JSON}}'
      data-audio-url="{{AUDIO_URL}}"
@@ -233,7 +232,7 @@ window.__timelines = window.__timelines || {};
 
 document.addEventListener('DOMContentLoaded', () => {
   const root = document.getElementById('root');
-  // Inject data — server substitutes data-* attributes on root.
+  // Inject data — server substitutes data-* attributes on root div.
   // Runtime alternative: window.__WORDS__ / __SCRIPTURE_REFS__ / __TOTAL_SEC__
   function readJsonAttr(name) {
     const raw = (root.getAttribute(name) || '').trim();
@@ -339,44 +338,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Word reveal — start clipped to body window so captions don't bleed
     const winStart = T.body.in;
     const winEnd   = T.body.out;
-    /* Chunk fade — 6 word 단위. chunk fade-out + 다음 chunk fade-in. */
-    const CHUNK_WORDS = 6;
-    const chunks = [];
-    for (let i = 0; i < wordSpans.length; i += CHUNK_WORDS) {
-      chunks.push({
-        spans: wordSpans.slice(i, i + CHUNK_WORDS),
-        words: words.slice(i, i + CHUNK_WORDS),
-      });
-    }
-    chunks.forEach((c, ci) => {
-      const cw0 = c.words[0];
-      const chunkStart = winStart + Math.max(0, Number(cw0.start) || 0);
-      if (chunkStart > winEnd - 0.4) return;
-      const cwLast = c.words[c.words.length - 1];
-      const chunkEnd = winStart + Math.max(
-        Number(cwLast.end) || 0, Number(cwLast.start) || 0
-      );
-      const fadeOutAt = Math.min(chunkEnd + 0.5, winEnd - 0.4);
-
-      c.spans.forEach((span, j) => {
-        const w = c.words[j];
-        const at = winStart + Math.max(0, Number(w.start) || 0);
-        if (at > winEnd - 0.4) return;
-        tl.to(span, {
-          opacity: 1, scale: 1, duration: 0.35, ease: 'power2.out',
-        }, at);
-        if (w.is_emphasis) {
-          tl.to(span, { scale: 1.04, duration: 0.18, ease: 'power2.out' }, at + 0.08)
-            .to(span, { scale: 1.00, duration: 0.18, ease: 'power2.in'  }, at + 0.30);
-        }
-      });
-      tl.to(c.spans, {
-        opacity: 0, duration: 0.35, ease: 'power1.in',
-      }, fadeOutAt);
+    /* v1 graft — 단순 individual fade-in. chunk 분할 없음. */
+    words.forEach((w, i) => {
+      const at = winStart + Math.max(0, Number(w.start) || 0);
+      if (at > winEnd - 0.4) return;
+      const span = wordSpans[i];
+      tl.to(span, {
+        opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out',
+      }, at);
+      if (w.is_emphasis) {
+        tl.to(span, { scale: 1.04, duration: 0.18, ease: 'power2.out' }, at + 0.05)
+          .to(span, { scale: 1.00, duration: 0.18, ease: 'power2.in'  }, at + 0.25);
+      }
     });
-
-    // body 종료 시 caption 영역 일괄 hard-kill
-    tl.set(wordSpans, { opacity: 0 }, T.body.out - 0.1);
     tl.to('#scene-body', { opacity: 0, duration: 0.5, ease: 'power1.in', overwrite: 'auto' },
           T.body.out - 0.3);
     // Hard kill — caption_exit_missing_hard_kill safety
