@@ -94,18 +94,23 @@ body {
 #scene-body {
   background: var(--color-charcoal);
 }
+/* Lower-third 안전 영역: bottom-anchored 박스 + overflow hidden 으로
+   chunk 가 화면 밖으로 누적되지 않게 강제. */
 #captions {
   position: absolute;
   left: 64px; right: 64px;
-  top: 1080px; height: 540px;
+  bottom: 380px;            /* TikTok action 영역 270 + breathing 110 */
+  height: 540px;
+  overflow: hidden;
   font-family: var(--font-ui); font-weight: 800;
   font-size: 84px; line-height: 1.22;
   word-break: keep-all;
   text-align: center;
   display: flex; flex-wrap: wrap;
-  justify-content: center; align-items: flex-end; align-content: flex-end;
+  justify-content: center;
+  align-items: flex-end; align-content: flex-end;
   gap: 8px 14px;
-  padding-bottom: 20px;
+  padding: 12px 0 20px;
 }
 #captions .word {
   display: inline-block;
@@ -160,7 +165,7 @@ body {
 <div id="root"
      data-composition-id="{{COMPOSITION_ID}}"
      data-start="0"
-     data-duration="{{TOTAL_SEC}}"
+     data-duration="60"
      data-width="1080"
      data-height="1920"
      data-fps="30"
@@ -173,11 +178,11 @@ body {
   <!-- Audio tracks (HF picks up <audio> elements; runtime overrides src) -->
   <!-- silent.mp3 = lint-friendly placeholder; sermon-app injects real URL -->
   <audio id="track-voice"   data-track-index="1" data-volume="1.0"
-         data-start="0" data-duration="{{TOTAL_SEC}}"
-         src="silent.mp3" preload="auto"></audio>
+         data-start="0" data-duration="60"
+         src="silent60.mp3" preload="auto"></audio>
   <audio id="track-musicbed" data-track-index="2" data-volume="0.4"
-         data-start="0" data-duration="{{TOTAL_SEC}}"
-         src="silent.mp3" preload="auto"></audio>
+         data-start="0" data-duration="60"
+         src="silent60.mp3" preload="auto"></audio>
 
   <!-- Scenes (all rendered, opacity-controlled by timeline) -->
   <div id="scene-hook" class="scene">
@@ -334,25 +339,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Word reveal — start clipped to body window so captions don't bleed
     const winStart = T.body.in;
     const winEnd   = T.body.out;
-    /* 줄단위 chunk — 한 번에 ~5-6 words만 화면에 보이도록.
-     * caption 박스 height(540px) 안에 누적 안 되게 묶음 단위 fade in/out. */
+    /* Chunk fade — 6 word 단위. chunk fade-out + 다음 chunk fade-in. */
     const CHUNK_WORDS = 6;
-    let chunkIdx = 0;
+    const chunks = [];
     for (let i = 0; i < wordSpans.length; i += CHUNK_WORDS) {
-      const chunkSpans = wordSpans.slice(i, i + CHUNK_WORDS);
-      const chunkWords = words.slice(i, i + CHUNK_WORDS);
-      const chunkStart = winStart + Math.max(0, Number(chunkWords[0].start) || 0);
-      if (chunkStart > winEnd - 0.4) break;  // chunk past body
-      const lastWord = chunkWords[chunkWords.length - 1];
+      chunks.push({
+        spans: wordSpans.slice(i, i + CHUNK_WORDS),
+        words: words.slice(i, i + CHUNK_WORDS),
+      });
+    }
+    chunks.forEach((c, ci) => {
+      const cw0 = c.words[0];
+      const chunkStart = winStart + Math.max(0, Number(cw0.start) || 0);
+      if (chunkStart > winEnd - 0.4) return;
+      const cwLast = c.words[c.words.length - 1];
       const chunkEnd = winStart + Math.max(
-        Number(lastWord.end) || 0,
-        Number(lastWord.start) || 0
+        Number(cwLast.end) || 0, Number(cwLast.start) || 0
       );
-      const fadeOutAt = Math.min(chunkEnd + 0.4, winEnd - 0.4);
+      const fadeOutAt = Math.min(chunkEnd + 0.5, winEnd - 0.4);
 
-      // 이 chunk의 단어들 — 개별 fade-in (gemma 식별 강조 단어는 살짝 scale)
-      chunkSpans.forEach((span, j) => {
-        const w = chunkWords[j];
+      c.spans.forEach((span, j) => {
+        const w = c.words[j];
         const at = winStart + Math.max(0, Number(w.start) || 0);
         if (at > winEnd - 0.4) return;
         tl.to(span, {
@@ -363,12 +370,13 @@ document.addEventListener('DOMContentLoaded', () => {
             .to(span, { scale: 1.00, duration: 0.18, ease: 'power2.in'  }, at + 0.30);
         }
       });
-      // chunk 통째로 fade-out (다음 chunk가 등장하기 전 화면 비움)
-      tl.to(chunkSpans, {
+      tl.to(c.spans, {
         opacity: 0, duration: 0.35, ease: 'power1.in',
       }, fadeOutAt);
-      chunkIdx++;
-    }
+    });
+
+    // body 종료 시 caption 영역 일괄 hard-kill
+    tl.set(wordSpans, { opacity: 0 }, T.body.out - 0.1);
     tl.to('#scene-body', { opacity: 0, duration: 0.5, ease: 'power1.in', overwrite: 'auto' },
           T.body.out - 0.3);
     // Hard kill — caption_exit_missing_hard_kill safety

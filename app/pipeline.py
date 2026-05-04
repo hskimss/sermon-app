@@ -137,6 +137,37 @@ def transcribe(src: Path, dst: Path, model_size: str = "mlx-community/whisper-la
         dst.write_text(json.dumps(out, ensure_ascii=False, indent=2))
         if job_id:
             _update_phase(job_id, "transcribing", progress_pct=100.0)
+
+        # Phase C — WhisperX align (선택, ±50ms 정확도)
+        # 환경변수 WHISPERX_ALIGN=0 으로 비활성. 실패 시 fallback 그대로.
+        if _os.environ.get("WHISPERX_ALIGN", "1") != "0":
+            try:
+                import requests as _req
+                url = _os.environ.get(
+                    "WHISPERX_URL", "http://100.104.121.7:8771"
+                )
+                r = _req.post(
+                    f"{url.rstrip('/')}/align",
+                    json={"audio_path": str(src),
+                          "transcript_segments": segments},
+                    timeout=180,
+                )
+                if r.status_code == 200:
+                    aligned = r.json()
+                    # 사전 백업
+                    bak = dst.with_suffix(".pre_align.json")
+                    bak.write_text(dst.read_text())
+                    aligned["duration"] = int(audio_dur_sec)
+                    dst.write_text(json.dumps(aligned, ensure_ascii=False, indent=2))
+                    if job_id:
+                        _update_phase(job_id, "transcribing",
+                                      progress_pct=100.0, aligned=True)
+            except Exception as _ex:
+                # silent fallback — pre-align transcript 그대로 유지
+                if job_id:
+                    _update_phase(job_id, "transcribing",
+                                  progress_pct=100.0,
+                                  align_skipped=str(_ex)[:200])
     finally:
         stop_flag["done"] = True
 
