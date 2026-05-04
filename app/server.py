@@ -351,22 +351,37 @@ def api_render(job_id):
       }
     """
     from app.jobs import JOBS_DIR
-    from app.render import build_short_payload, HyperFramesClient, RenderError
+    from app.render import (
+        build_short_payload, build_short_payload_v2,
+        HyperFramesClient, RenderError,
+    )
 
     body = request.get_json(silent=True) or {}
     clip = body.get("clip") or {}
     if "start_sec" not in clip or "end_sec" not in clip:
         return jsonify({"error": "clip.start_sec/end_sec required"}), 400
 
+    composition = body.get("composition", "sermon_short_v2")  # default v2
     try:
-        payload = build_short_payload(
-            job_id=job_id, clip=clip, jobs_dir=JOBS_DIR,
-            composition=body.get("composition", "sermon_short_v1"),
-            fmt=body.get("format", "9:16"),
-            quality=body.get("quality", "1080p"),
-            house_style=body.get("house_style", "a_church_london_v1"),
-            callback_url=body.get("callback_url"),
-        )
+        if composition == "sermon_short_v2":
+            payload = build_short_payload_v2(
+                job_id=job_id, clip=clip, jobs_dir=JOBS_DIR,
+                fmt=body.get("format", "9:16"),
+                quality=body.get("quality", "1080p"),
+                house_style=body.get("house_style", "a_church_london_v1"),
+                callback_url=body.get("callback_url"),
+                austerity_phrase=body.get("austerity_phrase"),
+                music_bed_url=body.get("music_bed_url", ""),
+            )
+        else:
+            payload = build_short_payload(
+                job_id=job_id, clip=clip, jobs_dir=JOBS_DIR,
+                composition=composition,
+                fmt=body.get("format", "9:16"),
+                quality=body.get("quality", "1080p"),
+                house_style=body.get("house_style", "a_church_london_v1"),
+                callback_url=body.get("callback_url"),
+            )
     except FileNotFoundError as ex:
         return jsonify({"error": str(ex)}), 404
 

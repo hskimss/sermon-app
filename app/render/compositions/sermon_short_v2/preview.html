@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>sermon_short_v2 — Local Preview</title>
+<style>
+  body { margin: 0; background: #1a1f3c; color: #e0e0e0;
+         font-family: -apple-system, sans-serif; min-height: 100vh; }
+  header { padding: 16px 24px; background: #0a0d1f; border-bottom: 1px solid #2a2f4c;
+           display: flex; align-items: center; gap: 12px; }
+  h1 { color: #c9a84c; font-size: 16px; font-weight: 700; margin: 0; }
+  .meta { color: #888; font-size: 12px; }
+  main { display: grid; grid-template-columns: 540px 1fr; gap: 24px; padding: 24px; }
+  iframe { width: 540px; height: 960px; border: 1px solid #2a2f4c; background: #000;
+           border-radius: 4px; transform: scale(0.5); transform-origin: top left; }
+  .frame-wrap { width: 540px; height: 960px; overflow: hidden; }
+  .controls { background: #0a0d1f; padding: 16px; border-radius: 6px;
+              border: 1px solid #2a2f4c; }
+  textarea { width: 100%; min-height: 240px; background: #1a1f3c; color: #e0e0e0;
+             border: 1px solid #2a2f4c; border-radius: 4px; padding: 8px;
+             font-family: Menlo, monospace; font-size: 11px; }
+  button { padding: 8px 14px; background: #c9a84c; color: #1a1f3c; border: none;
+           border-radius: 4px; cursor: pointer; font-weight: 700; margin-top: 8px; }
+  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px;
+            margin-right: 4px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<header>
+  <h1>sermon_short_v2 preview</h1>
+  <span class="meta">1080×1920 @ 50% — A Church London</span>
+</header>
+<main>
+  <div class="frame-wrap">
+    <iframe id="preview" src="index.html"></iframe>
+  </div>
+  <div class="controls">
+    <h2 style="font-size:13px;color:#c9a84c;margin-bottom:8px;">Inject test data</h2>
+    <p style="font-size:11px;color:#888;margin-bottom:12px;">
+      sermon-app's hf-server normally substitutes <code>{{...}}</code> placeholders.
+      For local preview we paste a JSON payload here and it's stored as
+      <code>window.__renderData</code> + reloaded.
+    </p>
+    <textarea id="payload">{
+  "TOTAL_SEC": 60,
+  "HOOK_TEXT": "너는 예수님을 어떻게 대했냐",
+  "HOOK_ARCHETYPE": "질문",
+  "AUSTERITY_PHRASE": "주님 앞에 잠잠하라",
+  "WORDS_JSON": [
+    {"word":"너는","start":0.5,"end":1.0,"is_emphasis":false},
+    {"word":"예수님을","start":1.0,"end":1.7,"is_emphasis":true},
+    {"word":"어떻게","start":1.7,"end":2.3,"is_emphasis":false},
+    {"word":"대했냐","start":2.3,"end":3.0,"is_emphasis":false}
+  ],
+  "SCRIPTURE_REFS_JSON": [{
+    "book":"요한복음","chapter":3,"verse_start":16,"verse_end":16,
+    "text":"하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니 이는 그를 믿는 자마다 멸망하지 않고 영생을 얻게 하려 하심이라",
+    "translation":"개역개정","appears_at_sec":6
+  }]
+}</textarea>
+    <button id="reload">▶ Inject + Reload</button>
+
+    <h2 style="font-size:13px;color:#c9a84c;margin:20px 0 8px;">Brand swatches</h2>
+    <div style="font-size:11px;line-height:1.8;">
+      <div><span class="swatch" style="background:#0E1116"></span> charcoal</div>
+      <div><span class="swatch" style="background:#F5EFE0"></span> parchment</div>
+      <div><span class="swatch" style="background:#1A2236"></span> ink</div>
+      <div><span class="swatch" style="background:#B8923A"></span> gold</div>
+      <div><span class="swatch" style="background:#D4AF37"></span> emphasis</div>
+      <div><span class="swatch" style="background:#6B1F26"></span> oxblood</div>
+    </div>
+  </div>
+</main>
+<script>
+document.getElementById('reload').addEventListener('click', () => {
+  let payload;
+  try { payload = JSON.parse(document.getElementById('payload').value); }
+  catch (e) { alert('JSON parse error: ' + e.message); return; }
+  const iframe = document.getElementById('preview');
+  iframe.onload = () => {
+    const w = iframe.contentWindow;
+    w.__WORDS__ = payload.WORDS_JSON || [];
+    w.__SCRIPTURE_REFS__ = payload.SCRIPTURE_REFS_JSON || [];
+    w.__TOTAL_SEC__ = payload.TOTAL_SEC || 60;
+    iframe.onload = null;
+    iframe.contentWindow.location.reload();
+  };
+  iframe.contentWindow.location.reload();
+});
+</script>
+</body>
+</html>

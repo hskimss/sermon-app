@@ -3,6 +3,7 @@ from __future__ import annotations
 import imageio_ffmpeg
 _FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 
+import os
 import json
 import re
 import subprocess
@@ -258,12 +259,21 @@ def export_audio(job_id: str, edit_plan: dict) -> Path | None:
     # SRT (with new timestamps after cuts)
     srt_path = out_path.with_suffix(".srt")
     write_srt(job_id, keeps, srt_path)
-    
+
     # transcript_final.json
     transcript_final = build_final_transcript(job_id, keeps, name)
     final_json_path = out_path.with_suffix(".transcript.json")
     final_json_path.write_text(json.dumps(transcript_final, ensure_ascii=False, indent=2))
-    
+
+    # Phase D — ffmpeg loudnorm master (-16 LUFS YouTube spec, Auphonic 우회)
+    # 환경변수 SERMON_MASTER_AUDIO=0 으로 비활성 가능
+    if os.environ.get("SERMON_MASTER_AUDIO", "1") != "0":
+        try:
+            from app.render.audio_master import ensure_master
+            ensure_master(out_path)
+        except Exception as ex:
+            print(f"[master] skipped ({ex})", flush=True)
+
     return out_path
 
 

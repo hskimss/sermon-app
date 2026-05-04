@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>sermon_short_v2 — A Church London</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&display=swap');
+
+:root,
+:root[data-house="a_church_london_v1"] {
+  --color-charcoal: #0E1116;
+  --color-parchment: #F5EFE0;
+  --color-ink: #1A2236;
+  --color-gold: #B8923A;
+  --color-emphasis: #D4AF37;
+  --color-oxblood: #6B1F26;
+
+  --font-ui: 'Pretendard Variable', 'Pretendard', -apple-system, sans-serif;
+  --font-scripture-ko: 'Sandoll Myungjo Neo1', 'Noto Serif KR', serif;
+  --font-scripture-en: 'Adobe Caslon Pro', 'EB Garamond', serif;
+  --font-title-ko: 'Ridibatang', 'Noto Serif KR', serif;
+
+  --stroke-8:
+    -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000,
+    -3px 0 0 #000, 3px 0 0 #000, 0 -3px 0 #000, 0 3px 0 #000,
+    0 5px 12px rgba(0,0,0,0.55);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { background: var(--color-charcoal); color: #fff; }
+body {
+  width: 1080px; height: 1920px; overflow: hidden;
+  font-family: var(--font-ui);
+}
+
+/* ─── Safe zones (TikTok / Reels / Shorts UI areas) ─────────────── */
+.safe-top    { position:absolute; top:0;    left:0; right:0; height:220px; pointer-events:none; }
+.safe-bottom { position:absolute; bottom:0; left:0; right:0; height:270px; pointer-events:none; }
+
+/* ─── Scene base — all stacked, GSAP toggles opacity ──────────────── */
+.scene {
+  position:absolute; top:0; left:0; width:1080px; height:1920px;
+  opacity: 0;
+}
+
+/* ─── Scene 1 · Hook ───────────────────────────────────────────────── */
+#scene-hook {
+  display:flex; align-items:center; justify-content:center;
+  padding: 240px 70px 280px;
+  background: var(--color-charcoal);
+}
+#hook-text {
+  font-family: var(--font-ui); font-weight: 800;
+  font-size: 96px; line-height: 1.18;
+  word-break: keep-all; text-align: center;
+  color: var(--color-parchment);
+  letter-spacing: -0.01em;
+}
+
+/* ─── Scene 2 · Scripture card ─────────────────────────────────────── */
+#scene-scripture {
+  display:flex; align-items:center; justify-content:center;
+  padding: 240px 64px 280px;
+  background: var(--color-charcoal);
+}
+.scripture-card {
+  width: 100%;
+  background: rgba(245, 239, 224, 0.06);
+  border-left: 4px solid var(--color-gold);
+  padding: 60px 56px 52px;
+  position: relative;
+}
+.scripture-ref {
+  font-family: var(--font-ui); font-weight: 700;
+  font-size: 40px; color: var(--color-gold);
+  letter-spacing: 0.02em; margin-bottom: 28px;
+}
+.scripture-text {
+  font-family: var(--font-scripture-ko); font-weight: 600;
+  font-size: 56px; line-height: 1.45;
+  word-break: keep-all;
+  color: var(--color-parchment);
+}
+.scripture-translation {
+  position: absolute; right: 24px; bottom: 18px;
+  font-family: var(--font-ui); font-size: 22px;
+  color: rgba(245, 239, 224, 0.5);
+  letter-spacing: 0.05em;
+}
+
+/* ─── Scene 3 · Body / lower-third captions ────────────────────────── */
+#scene-body {
+  background: var(--color-charcoal);
+}
+#captions {
+  position: absolute;
+  left: 64px; right: 64px;
+  top: 1080px; height: 540px;
+  font-family: var(--font-ui); font-weight: 800;
+  font-size: 84px; line-height: 1.22;
+  word-break: keep-all;
+  text-align: center;
+  display: flex; flex-wrap: wrap;
+  justify-content: center; align-items: flex-end; align-content: flex-end;
+  gap: 8px 14px;
+  padding-bottom: 20px;
+}
+#captions .word {
+  display: inline-block;
+  color: #FFFFFF;
+  text-shadow: var(--stroke-8);
+  opacity: 0; transform: scale(0.96);
+  will-change: opacity, transform;
+}
+#captions .word.emphasis { color: var(--color-emphasis); }
+
+/* ─── Scene 4 · Austerity ──────────────────────────────────────────── */
+#scene-austerity {
+  display:flex; align-items:center; justify-content:center;
+  padding: 240px 80px 280px;
+  background: #000;
+}
+#austerity-text {
+  font-family: var(--font-scripture-ko); font-weight: 600;
+  font-size: 76px; line-height: 1.4;
+  text-align: center; word-break: keep-all;
+  color: var(--color-parchment);
+  letter-spacing: 0.02em;
+}
+
+/* ─── Scene 5 · Outro ──────────────────────────────────────────────── */
+#scene-outro {
+  background: var(--color-charcoal);
+}
+#outro-archetype {
+  position: absolute; top: 280px; left: 0; right: 0;
+  text-align: center;
+  font-family: var(--font-ui); font-weight: 600;
+  font-size: 28px; color: var(--color-gold);
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+#outro-brand {
+  position: absolute; right: 64px; bottom: 320px;
+  font-family: var(--font-ui); font-weight: 600;
+  font-size: 30px; color: rgba(255,255,255,0.7);
+  letter-spacing: 0.04em;
+}
+
+/* ─── Subtle progress bar (always visible) ─────────────────────────── */
+#progress {
+  position: absolute; bottom: 0; left: 0;
+  height: 3px; width: 0;
+  background: var(--color-gold); opacity: 0.55;
+}
+</style>
+</head>
+<body>
+<div id="root"
+     data-composition-id="{{COMPOSITION_ID}}"
+     data-start="0"
+     data-duration="{{TOTAL_SEC}}"
+     data-width="1080"
+     data-height="1920"
+     data-fps="30"
+     data-house="a_church_london_v1"
+     data-words-json='{{WORDS_JSON}}'
+     data-scripture-refs-json='{{SCRIPTURE_REFS_JSON}}'
+     data-audio-url="{{AUDIO_URL}}"
+     data-music-bed-url="{{MUSIC_BED_URL}}">
+
+  <!-- Audio tracks (HF picks up <audio> elements; runtime overrides src) -->
+  <!-- silent.mp3 = lint-friendly placeholder; sermon-app injects real URL -->
+  <audio id="track-voice"   data-track-index="1" data-volume="1.0"
+         data-start="0" data-duration="{{TOTAL_SEC}}"
+         src="silent.mp3" preload="auto"></audio>
+  <audio id="track-musicbed" data-track-index="2" data-volume="0.4"
+         data-start="0" data-duration="{{TOTAL_SEC}}"
+         src="silent.mp3" preload="auto"></audio>
+
+  <!-- Scenes (all rendered, opacity-controlled by timeline) -->
+  <div id="scene-hook" class="scene">
+    <div id="hook-text">{{HOOK_TEXT}}</div>
+  </div>
+
+  <div id="scene-scripture" class="scene">
+    <div class="scripture-card">
+      <div class="scripture-ref"   id="scripture-ref">{{SCRIPTURE_REF}}</div>
+      <div class="scripture-text"  id="scripture-text">{{SCRIPTURE_TEXT}}</div>
+      <div class="scripture-translation" id="scripture-trans">{{SCRIPTURE_TRANSLATION}}</div>
+    </div>
+  </div>
+
+  <div id="scene-body" class="scene">
+    <div id="captions" aria-live="polite"></div>
+  </div>
+
+  <div id="scene-austerity" class="scene">
+    <div id="austerity-text">{{AUSTERITY_PHRASE}}</div>
+  </div>
+
+  <div id="scene-outro" class="scene">
+    <div id="outro-archetype">{{HOOK_ARCHETYPE}}</div>
+    <div id="outro-brand">A Church London</div>
+  </div>
+
+  <div class="safe-top"></div>
+  <div class="safe-bottom"></div>
+  <div id="progress"></div>
+</div>
+
+<script>
+/* ──────────────────────────────────────────────────────────────
+ * sermon_short_v2 — 5-scene composition with graceful degradation
+ *
+ * Inject contract (server-side placeholder substitution):
+ *   COMPOSITION_ID, TOTAL_SEC, AUDIO_URL, MUSIC_BED_URL,
+ *   HOOK_TEXT, HOOK_ARCHETYPE, AUSTERITY_PHRASE,
+ *   SCRIPTURE_REF, SCRIPTURE_TEXT, SCRIPTURE_TRANSLATION,
+ *   WORDS_JSON           -> array<{word,start,end,is_emphasis}>
+ *   SCRIPTURE_REFS_JSON  -> array<{book,chapter,verse_start,verse_end,text,translation,appears_at_sec}>
+ *
+ * Runtime injection (alternative): set window.__renderData = {...}
+ * before DOMContentLoaded.
+ * ────────────────────────────────────────────────────────────── */
+window.__timelines = window.__timelines || {};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const root = document.getElementById('root');
+  // Inject data — server substitutes data-* attributes on root.
+  // Runtime alternative: window.__WORDS__ / __SCRIPTURE_REFS__ / __TOTAL_SEC__
+  function readJsonAttr(name) {
+    const raw = (root.getAttribute(name) || '').trim();
+    if (!raw) return [];
+    try { return JSON.parse(raw); } catch (_) { return []; }
+  }
+  const TOTAL = Number(window.__TOTAL_SEC__)
+    || Number(root.getAttribute('data-duration')) || 60;
+  const words = Array.isArray(window.__WORDS__)
+    ? window.__WORDS__ : readJsonAttr('data-words-json');
+  const refs  = Array.isArray(window.__SCRIPTURE_REFS__)
+    ? window.__SCRIPTURE_REFS__ : readJsonAttr('data-scripture-refs-json');
+
+  // Audio src injection (lint-friendly: no placeholder in src)
+  const voiceUrl = root.getAttribute('data-audio-url') || '';
+  const bedUrl   = root.getAttribute('data-music-bed-url') || '';
+  if (voiceUrl) document.getElementById('track-voice').src = voiceUrl;
+  if (bedUrl)   document.getElementById('track-musicbed').src = bedUrl;
+
+  /* ─── Scene timing — graceful degradation when scripture/words missing */
+  const HOOK_DUR = 6.0;
+  const SCRIPT_DUR = 8.0;          // scene 2
+  const AUSTERITY_DUR = 6.0;
+  const OUTRO_DUR = 6.0;
+  const DISSOLVE = 0.8;
+
+  const haveScripture = refs.length > 0 && (refs[0].text || refs[0].book);
+  const haveWords     = words.length > 0;
+
+  let t = 0;
+  const T = {};
+  T.hook = { in: 0, out: HOOK_DUR };
+  t = HOOK_DUR;
+
+  if (haveScripture) {
+    T.scripture = { in: t, out: t + SCRIPT_DUR };
+    t += SCRIPT_DUR;
+  }
+
+  if (haveWords) {
+    // Body fills the gap up to (TOTAL - austerity - outro)
+    T.body = { in: t, out: TOTAL - AUSTERITY_DUR - OUTRO_DUR };
+  }
+  t = TOTAL - AUSTERITY_DUR - OUTRO_DUR;
+  T.austerity = { in: t, out: t + AUSTERITY_DUR };
+  t += AUSTERITY_DUR;
+  T.outro = { in: t, out: TOTAL };
+
+  /* ─── Captions DOM (scene 3) */
+  const cap = document.getElementById('captions');
+  cap.innerHTML = '';
+  const wordSpans = words.map((w, i) => {
+    const span = document.createElement('span');
+    span.className = 'word' + (w.is_emphasis ? ' emphasis' : '');
+    span.dataset.wid = w.wid || ('w' + i);
+    span.textContent = (w.word || '').trim();
+    cap.appendChild(span);
+    return span;
+  });
+
+  /* ─── Scripture text fill (scene 2) — runtime if not server-substituted */
+  if (haveScripture) {
+    const r = refs[0];
+    const refEl = document.getElementById('scripture-ref');
+    const txEl  = document.getElementById('scripture-text');
+    const trEl  = document.getElementById('scripture-trans');
+    if (r.book) {
+      const verseRange = r.verse_end && r.verse_end !== r.verse_start
+        ? `${r.verse_start}-${r.verse_end}` : `${r.verse_start}`;
+      refEl.textContent = `${r.book} ${r.chapter}:${verseRange}`;
+    }
+    if (r.text)         txEl.textContent = r.text;
+    if (r.translation)  trEl.textContent = r.translation;
+  }
+
+  /* ─── GSAP master timeline */
+  const tl = gsap.timeline({ paused: true });
+
+  // Scene 1 · Hook fade in 0.6s, fade out (dissolve) 0.8s into scene 2
+  tl.to('#scene-hook', { opacity: 1, duration: 0.6, ease: 'power2.out' }, T.hook.in);
+  if (haveScripture) {
+    tl.to('#scene-hook', { opacity: 0, duration: DISSOLVE, ease: 'power1.inOut' },
+          T.scripture.in - DISSOLVE * 0.5);
+  } else if (haveWords) {
+    tl.to('#scene-hook', { opacity: 0, duration: DISSOLVE, ease: 'power1.inOut' },
+          T.body.in - DISSOLVE * 0.5);
+  } else {
+    tl.to('#scene-hook', { opacity: 0, duration: DISSOLVE, ease: 'power1.inOut' },
+          T.austerity.in - DISSOLVE * 0.5);
+  }
+
+  // Scene 2 · Scripture (cross-dissolve from scene 1)
+  if (haveScripture) {
+    tl.to('#scene-scripture', { opacity: 1, duration: DISSOLVE, ease: 'power1.inOut' },
+          T.scripture.in - DISSOLVE * 0.5);
+    tl.to('#scene-scripture', { opacity: 0, duration: 0.5, ease: 'power1.in' },
+          T.scripture.out - 0.3);
+  }
+
+  // Scene 3 · Body captions (fade in then word-by-word reveal)
+  if (haveWords) {
+    tl.to('#scene-body', { opacity: 1, duration: 0.5, ease: 'power2.out' }, T.body.in);
+    // Word reveal — start clipped to body window so captions don't bleed
+    const winStart = T.body.in;
+    const winEnd   = T.body.out;
+    /* 줄단위 chunk — 한 번에 ~5-6 words만 화면에 보이도록.
+     * caption 박스 height(540px) 안에 누적 안 되게 묶음 단위 fade in/out. */
+    const CHUNK_WORDS = 6;
+    let chunkIdx = 0;
+    for (let i = 0; i < wordSpans.length; i += CHUNK_WORDS) {
+      const chunkSpans = wordSpans.slice(i, i + CHUNK_WORDS);
+      const chunkWords = words.slice(i, i + CHUNK_WORDS);
+      const chunkStart = winStart + Math.max(0, Number(chunkWords[0].start) || 0);
+      if (chunkStart > winEnd - 0.4) break;  // chunk past body
+      const lastWord = chunkWords[chunkWords.length - 1];
+      const chunkEnd = winStart + Math.max(
+        Number(lastWord.end) || 0,
+        Number(lastWord.start) || 0
+      );
+      const fadeOutAt = Math.min(chunkEnd + 0.4, winEnd - 0.4);
+
+      // 이 chunk의 단어들 — 개별 fade-in (gemma 식별 강조 단어는 살짝 scale)
+      chunkSpans.forEach((span, j) => {
+        const w = chunkWords[j];
+        const at = winStart + Math.max(0, Number(w.start) || 0);
+        if (at > winEnd - 0.4) return;
+        tl.to(span, {
+          opacity: 1, scale: 1, duration: 0.35, ease: 'power2.out',
+        }, at);
+        if (w.is_emphasis) {
+          tl.to(span, { scale: 1.04, duration: 0.18, ease: 'power2.out' }, at + 0.08)
+            .to(span, { scale: 1.00, duration: 0.18, ease: 'power2.in'  }, at + 0.30);
+        }
+      });
+      // chunk 통째로 fade-out (다음 chunk가 등장하기 전 화면 비움)
+      tl.to(chunkSpans, {
+        opacity: 0, duration: 0.35, ease: 'power1.in',
+      }, fadeOutAt);
+      chunkIdx++;
+    }
+    tl.to('#scene-body', { opacity: 0, duration: 0.5, ease: 'power1.in', overwrite: 'auto' },
+          T.body.out - 0.3);
+    // Hard kill — caption_exit_missing_hard_kill safety
+    tl.set('#scene-body', { opacity: 0, visibility: 'hidden' }, T.body.out + 0.05);
+  }
+
+  // Scene 4 · Austerity (hard cut from previous, music silenced via volume keyframe)
+  tl.to('#scene-austerity', { opacity: 1, duration: 0.4, ease: 'power1.inOut', overwrite: 'auto' }, T.austerity.in);
+  // Drop both audio tracks during austerity for reverent silence
+  tl.call(() => muteAllAudio(true), [], T.austerity.in);
+  tl.call(() => muteAllAudio(false), [], T.austerity.out);
+  tl.to('#scene-austerity', { opacity: 0, duration: 0.4, ease: 'power1.inOut' },
+        T.austerity.out - 0.2);
+
+  // Scene 5 · Outro
+  tl.to('#scene-outro', { opacity: 1, duration: 0.6, ease: 'power2.out' }, T.outro.in);
+
+  // Subtle progress bar (entire duration)
+  tl.to('#progress', { width: '100%', duration: TOTAL, ease: 'none' }, 0);
+
+  /* ─── helpers */
+  function muteAllAudio(silent) {
+    document.querySelectorAll('audio[data-track-index]').forEach(a => {
+      try { a.volume = silent ? 0 : Number(a.dataset.volume || a.getAttribute('data-volume') || 1.0); }
+      catch (_) {}
+    });
+  }
+
+  window.__timelines['{{COMPOSITION_ID}}'] = tl;
+  window.__hyperframes_ready = true;
+});
+</script>
+</body>
+</html>

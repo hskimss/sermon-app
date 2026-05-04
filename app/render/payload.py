@@ -156,3 +156,49 @@ def build_short_payload(
     if extra:
         body.update(extra)
     return body
+
+
+def build_short_payload_v2(
+    job_id: str,
+    clip: dict,
+    *,
+    jobs_dir: Path | str,
+    fmt: str = "9:16",
+    quality: str = "1080p",
+    house_style: str = DEFAULT_HOUSE_STYLE,
+    sermon_app_base: str | None = None,
+    callback_url: str | None = None,
+    austerity_phrase: str | None = None,
+    music_bed_url: str = "",
+    extra: dict[str, Any] | None = None,
+) -> dict:
+    """sermon_short_v2 composition payload (5 scenes).
+
+    DESIGN_BRIEF inject contract:
+      hook_text, hook_archetype, austerity_phrase, music_bed_url
+      + (재사용) audio_url, audio_clip, words, scripture_refs
+    """
+    # base는 v1과 동일 데이터 (transcript / emphasis / scripture)
+    body = build_short_payload(
+        job_id=job_id, clip=clip, jobs_dir=jobs_dir,
+        composition="sermon_short_v2",
+        fmt=fmt, quality=quality, house_style=house_style,
+        sermon_app_base=sermon_app_base, callback_url=callback_url,
+    )
+
+    # v2 specific keys
+    words = body.get("words") or []
+    # 첫 8 단어 = hook
+    hook_words = [w["word"] for w in words[:8] if w.get("word")]
+    body["hook_text"] = " ".join(hook_words).strip()
+    body["hook_archetype"] = (clip.get("hook_archetype") or "질문")[:8]
+    body["austerity_phrase"] = (
+        austerity_phrase
+        or clip.get("austerity_phrase")
+        or "주님 앞에 잠잠하라"
+    )[:24]
+    body["music_bed_url"] = music_bed_url or ""
+
+    if extra:
+        body.update(extra)
+    return body

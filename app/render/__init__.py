@@ -6,13 +6,14 @@
 - scripture.detect_scripture_refs(transcript, clip) → 인용 메타
 - client.HyperFramesClient(base_url) → HP /render 엔드포인트 통신
 """
-from .payload import build_short_payload
+from .payload import build_short_payload, build_short_payload_v2
 from .scripture import detect_scripture_refs, lookup_verse
 from .client import HyperFramesClient, RenderError
 from .bible import BibleStore, BookNameMapper, get_default_store
 
 __all__ = [
     "build_short_payload",
+    "build_short_payload_v2",
     "detect_scripture_refs",
     "lookup_verse",
     "HyperFramesClient",

@@ -853,11 +853,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #
     <span class="panel-title">🎬 AI 클립 추천 (Gemma 4)</span>
     <button class="panel-close" id="ai-clip-close">✕</button>
   </div>
-  <div id="hf-toggle-row" style="margin-bottom:10px;padding:8px;background:#0a0d1f;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:8px;">
+  <div id="hf-toggle-row" style="margin-bottom:10px;padding:8px;background:#0a0d1f;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
     <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
       <input type="checkbox" id="chk-hf-render">
-      <span>✨ <strong>HF 시각화</strong> — Pretendard 자막 + 골드 강조 + 성구 카드</span>
+      <span>✨ <strong>HF 시각화</strong></span>
     </label>
+    <select id="hf-comp-select" style="background:#1a1f3c;color:#e0e0e0;border:1px solid #2a2f4c;border-radius:3px;padding:3px 6px;font-size:11px;">
+      <option value="sermon_short_v2" selected>v2 (5-scene + 성구카드 + austerity)</option>
+      <option value="sermon_short_v1">v1 (lower-third only)</option>
+    </select>
     <span id="hf-status-pill" style="margin-left:auto;font-size:11px;color:#888;">확인 중…</span>
   </div>
   <div style="display:flex;gap:6px;margin-bottom:12px;">
@@ -1038,6 +1042,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #
 
   async function renderOneClip(jobId, clip, lineEl, idx, total) {
     const startTs = Date.now();
+    const compSel = document.getElementById("hf-comp-select");
+    const composition = compSel ? compSel.value : "sermon_short_v2";
     const submitR = await fetch("/api/job/" + jobId + "/render", {
       method: "POST", headers: {"Content-Type":"application/json"},
       body: JSON.stringify({
@@ -1045,7 +1051,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #
           start_sec: clip.start_sec,
           end_sec: clip.end_sec,
           hook_archetype: clip.archetype,
-        }
+        },
+        composition: composition,
       })
     });
     if (submitR.status === 502) {
