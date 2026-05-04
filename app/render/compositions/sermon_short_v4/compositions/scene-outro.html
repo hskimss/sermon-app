@@ -1,0 +1,70 @@
+<template id="scene-outro-template">
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <div data-composition-id="scene-outro" data-start="0" data-duration="6" data-width="1080" data-height="1920">
+  <style>
+    [data-composition-id="scene-outro"] {
+      width: 1080px; height: 1920px;
+      background: #0E1116;
+      position: relative;
+      overflow: hidden;
+      font-family: 'Pretendard Variable', sans-serif;
+    }
+    [data-composition-id="scene-outro"] .scene-content {
+      width: 100%; height: 100%;
+      padding: 280px 80px 280px 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      box-sizing: border-box;
+    }
+    [data-composition-id="scene-outro"] .archetype-label {
+      font-family: 'Pretendard Variable', sans-serif;
+      font-weight: 600;
+      font-size: 28px;
+      color: #D4AF37;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    [data-composition-id="scene-outro"] .brand-mark {
+      font-family: 'Pretendard Variable', sans-serif;
+      font-weight: 600;
+      font-size: 30px;
+      color: rgba(255, 255, 255, 0.7);
+      letter-spacing: 0.04em;
+    }
+  </style>
+
+  <div class="scene-content">
+    <div class="archetype-label" id="archetype">{{HOOK_ARCHETYPE}}</div>
+    <div class="brand-mark" id="brand">A Church London</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+window.__timelines = window.__timelines || {};
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      // Entrance
+      tl.fromTo("#archetype",
+        { opacity: 0, scale: 0.92 },
+        { opacity: 1, scale: 1, duration: 0.6, ease: "power3.out" },
+        0.4);
+      tl.fromTo("#brand",
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.7, ease: "expo.out" },
+        0.7);
+
+      // SKILL.md: FINAL SCENE may have exit (only here).
+      // Soft fade to black for the last 0.5s of the 6s scene.
+      tl.to(["#archetype", "#brand"],
+        { opacity: 0, duration: 0.5, ease: "sine.in" },
+        5.4);
+      tl.set({}, {}, 6);
+
+      window.__timelines["scene-outro"] = tl;
+    })();
+  
+  </script>
+</div>
+</template>

@@ -275,6 +275,35 @@ def build_short_payload_v2(
     return body
 
 
+def build_short_payload_v4(
+    job_id: str,
+    clip: dict,
+    *,
+    jobs_dir: Path | str,
+    fmt: str = "9:16",
+    quality: str = "1080p",
+    house_style: str = DEFAULT_HOUSE_STYLE,
+    sermon_app_base: str | None = None,
+    callback_url: str | None = None,
+    austerity_phrase: str | None = None,
+    music_bed_url: str = "",
+    body_window: tuple[float, float] = (14.0, 48.0),
+    extra: dict[str, Any] | None = None,
+) -> dict:
+    """sermon_short_v4 — JARVIS_HF_V4_TEMPLATE_FIX 정석 (sub-comp <template> wrapped)."""
+    body = build_short_payload_v3(
+        job_id=job_id, clip=clip, jobs_dir=jobs_dir,
+        fmt=fmt, quality=quality, house_style=house_style,
+        sermon_app_base=sermon_app_base, callback_url=callback_url,
+        austerity_phrase=austerity_phrase, music_bed_url=music_bed_url,
+        body_window=body_window,
+    )
+    body["composition"] = "sermon_short_v4"
+    if extra:
+        body.update(extra)
+    return body
+
+
 def build_short_payload_v3(
     job_id: str,
     clip: dict,

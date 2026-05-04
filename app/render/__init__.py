@@ -10,6 +10,7 @@ from .payload import (
     build_short_payload,
     build_short_payload_v2,
     build_short_payload_v3,
+    build_short_payload_v4,
 )
 from .scripture import detect_scripture_refs, lookup_verse
 from .client import HyperFramesClient, RenderError
@@ -19,6 +20,7 @@ __all__ = [
     "build_short_payload",
     "build_short_payload_v2",
     "build_short_payload_v3",
+    "build_short_payload_v4",
     "detect_scripture_refs",
     "lookup_verse",
     "HyperFramesClient",
