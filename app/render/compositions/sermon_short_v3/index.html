@@ -31,6 +31,7 @@
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
 <div data-composition-id="sermon_short_v3"
      data-width="1080" data-height="1920"
+     data-start="0" data-duration="60"
      data-house="a_church_london_v1">
 
   <!-- ─── Scene 1 · Hook (0–6s) ─────────────────────────────────────── -->
@@ -104,8 +105,12 @@
 </div>
 <script>
   // Master timeline registration (launch-video pattern)
+  // CRITICAL — tl.set({}, {}, 60) forces timeline length = 60s
+  // (Common Mistakes #3,#4 — without this HF infers Duration from
+  //  GSAP timeline length, not data-duration; sub-comps clipped)
   window.__timelines = window.__timelines || {};
   const masterTL = gsap.timeline({ paused: true });
+  masterTL.set({}, {}, 60);
   window.__timelines["sermon_short_v3"] = masterTL;
   // Runtime audio src override
   document.addEventListener("DOMContentLoaded", function () {
