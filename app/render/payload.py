@@ -163,7 +163,7 @@ def _chunk_body_lines(
     body_window_start: float = 14.0,
     body_window_end: float = 48.0,
     emphasis_ids: set[str] | None = None,
-    max_lines: int = 6,
+    max_lines: int = 12,
 ) -> list[dict]:
     """transcript segments → 4-6 body lines (each ~5-9s).
 
@@ -347,7 +347,7 @@ def build_short_payload_v3(
         body_window_start=body_window[0],
         body_window_end=body_window[1],
         emphasis_ids=emphasis_ids,
-        max_lines=6,
+        max_lines=12,
     )
 
     refs = body.get("scripture_refs") or []
