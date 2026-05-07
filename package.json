@@ -1,7 +1,7 @@
 {
   "name": "sermon-app",
   "version": "1.0.0",
-  "description": "``` brew install ffmpeg cd \"/Users/hwasungkim/Library/CloudStorage/GoogleDrive-sharonkim71@gmail.com/내 드라이브/AI/교회 앱/sermon-app\" python3 -m venv .venv && source .venv/bin/activate pip install -r requirements.txt ```",
+  "description": "Sermon video processing app",
   "main": "index.js",
   "directories": {
     "test": "tests"
